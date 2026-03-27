@@ -52,4 +52,46 @@ describe("filterRowsByPathQuery", () => {
 
     expect(indexed.map((row) => row.path)).toEqual(linear.map((row) => row.path));
   });
+
+  it("matches primitive values at any depth and includes ancestors", () => {
+    const data = {
+      users: [{ id: 1, name: "test-user" }, { id: 2, name: "Linus" }],
+      meta: { label: "production" }
+    };
+    const rows = flattenJson(data, new Set(["$", "$.users", "$.users[0]", "$.users[1]", "$.meta"]));
+
+    const filtered = filterRowsByPathQuery(rows, "test");
+
+    expect(filtered.map((row) => row.path)).toEqual([
+      "$",
+      "$.users",
+      "$.users[0]",
+      "$.users[0].name"
+    ]);
+  });
+
+  it("respects case sensitivity for value matching", () => {
+    const data = { profile: { tag: "TestCase" } };
+    const rows = flattenJson(data, new Set(["$", "$.profile"]));
+
+    const insensitive = filterRowsByPathQuery(rows, "test", { caseSensitive: false });
+    const sensitive = filterRowsByPathQuery(rows, "test", { caseSensitive: true });
+
+    expect(insensitive.map((row) => row.path)).toEqual(["$", "$.profile", "$.profile.tag"]);
+    expect(sensitive).toEqual([]);
+  });
+
+  it("matches object and array values", () => {
+    const data = {
+      details: { code: "ABC" },
+      tags: ["one", "two"]
+    };
+    const rows = flattenJson(data, new Set(["$", "$.details", "$.tags"]));
+
+    const objectFiltered = filterRowsByPathQuery(rows, '"code":"ABC"');
+    const arrayFiltered = filterRowsByPathQuery(rows, '"two"');
+
+    expect(objectFiltered.map((row) => row.path)).toEqual(["$", "$.details"]);
+    expect(arrayFiltered.map((row) => row.path)).toEqual(["$", "$.tags"]);
+  });
 });

@@ -11,7 +11,7 @@ Early v1 implementation.
 - Incremental async JSON parsing on the main thread
 - Virtualized tree rendering for large nested structures
 - Expand/collapse nodes with keyboard support
-- Path-based search and filter over JSON paths
+- Path and primitive-value search over JSON paths
 - Trie-indexed prefix path search for low-latency filtering on large trees
 - Controlled and uncontrolled expansion state
 - Token-based color theme overrides (keys, values, punctuation)
@@ -112,7 +112,7 @@ The demo will be available at:
 - `expandedPaths?: ReadonlySet<string>` Controlled expanded path set.
 - `defaultExpandedPaths?: Iterable<string>` Initial expanded paths in uncontrolled mode.
 - `onExpandedPathsChange?: (paths) => void` Expansion state callback.
-- `pathFilterQuery?: string` Filters rows by JSON path query.
+- `pathFilterQuery?: string` Filters by JSON path and all JSON value types (`string`, `number`, `boolean`, `null`, `object`, `array`). In `metadata=false`, it filters pretty-printed lines.
 - `pathFilterCaseSensitive?: boolean` Case-sensitive path filter mode.
 - `pathFilterMode?: "auto" | "prefix" | "includes"` Filter strategy. Defaults to `auto`.
 - `theme?: JsonThemeOverride` Per-token color overrides.

@@ -43,6 +43,23 @@ const normalize = (value: string, caseSensitive: boolean): string => {
   return caseSensitive ? value : value.toLowerCase();
 };
 
+const toSearchableValue = (row: FlatJsonRow): string | null => {
+  switch (row.valueType) {
+    case "string":
+      return row.rawValue as string;
+    case "number":
+    case "boolean":
+      return String(row.rawValue);
+    case "null":
+      return "null";
+    case "object":
+    case "array":
+      return JSON.stringify(row.rawValue);
+    default:
+      return null;
+  }
+};
+
 const createTrieNode = (): PathSearchTrieNode => ({
   children: new Map<string, PathSearchTrieNode>(),
   rowIndexes: []
@@ -123,10 +140,31 @@ export function filterRowsByPathQuery(
     options.index.matchPrefix(normalizedQuery).forEach((path) => {
       matchedPaths.add(path);
     });
+
+    rows.forEach((row) => {
+      const value = toSearchableValue(row);
+      if (!value) {
+        return;
+      }
+
+      if (normalize(value, caseSensitive).includes(needle)) {
+        matchedPaths.add(row.path);
+      }
+    });
   } else {
     rows.forEach((row) => {
-      const haystack = normalize(row.path, caseSensitive);
-      if (mode === "prefix" ? haystack.startsWith(needle) : haystack.includes(needle)) {
+      const normalizedPath = normalize(row.path, caseSensitive);
+      const pathMatch =
+        mode === "prefix"
+          ? normalizedPath.startsWith(needle)
+          : normalizedPath.includes(needle);
+
+      const value = toSearchableValue(row);
+      const valueMatch =
+        value !== null &&
+        normalize(value, caseSensitive).includes(needle);
+
+      if (pathMatch || valueMatch) {
         matchedPaths.add(row.path);
       }
     });

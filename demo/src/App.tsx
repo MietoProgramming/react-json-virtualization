@@ -359,10 +359,10 @@ export function App(): React.ReactElement {
 
         <div className="field-grid">
           <label>
-            Path filter query
+            Path/value filter query
             <input
               type="text"
-              placeholder="e.g. $.users[1] or users"
+              placeholder="e.g. $.users[1], users, or test"
               value={pathFilterQuery}
               onChange={(event) => setPathFilterQuery(event.target.value)}
             />

@@ -16,42 +16,8 @@ import { useVirtualization } from "../hooks/useVirtualization";
 import { resolveTheme, type JsonThemeOverride } from "../theme";
 import { JSONRow } from "./JSONRow";
 
-const buildLineStarts = (text: string): number[] => {
-  const starts = [0];
-  for (let index = 0; index < text.length; index += 1) {
-    if (text.charCodeAt(index) === 10) {
-      starts.push(index + 1);
-    }
-  }
-  return starts;
-};
-
-const lineSlice = (text: string, lineStarts: number[], startIndex: number, endIndex: number): string => {
-  const safeStart = Math.max(0, startIndex);
-  const safeEnd = Math.min(lineStarts.length, endIndex);
-
-  if (safeStart >= safeEnd) {
-    return "";
-  }
-
-  const lines: string[] = [];
-
-  for (let lineIndex = safeStart; lineIndex < safeEnd; lineIndex += 1) {
-    const start = lineStarts[lineIndex];
-    const nextStart = lineIndex + 1 < lineStarts.length ? lineStarts[lineIndex + 1] : text.length;
-    let end = nextStart;
-
-    if (end > start && text.charCodeAt(end - 1) === 10) {
-      end -= 1;
-    }
-    if (end > start && text.charCodeAt(end - 1) === 13) {
-      end -= 1;
-    }
-
-    lines.push(text.slice(start, end));
-  }
-
-  return lines.join("\n");
+const normalizeSearchInput = (value: string, caseSensitive: boolean): string => {
+  return caseSensitive ? value : value.toLowerCase();
 };
 
 interface PrettyToken {
@@ -251,11 +217,11 @@ export function JSONViewer({
     }
   }, [json, metadata]);
 
-  const lineStarts = useMemo(() => {
+  const prettyLines = useMemo(() => {
     if (metadata) {
-      return [] as number[];
+      return [] as string[];
     }
-    return buildLineStarts(prettySourceText);
+    return prettySourceText.split(/\r?\n/);
   }, [metadata, prettySourceText]);
 
   useEffect(() => {
@@ -373,6 +339,28 @@ export function JSONViewer({
     [metadata, pathFilterCaseSensitive, pathFilterQuery, pathSearchIndex, resolvedFilterMode, rows]
   );
 
+  const filteredPrettyLineIndexes = useMemo(() => {
+    if (metadata) {
+      return [] as number[];
+    }
+
+    const query = (pathFilterQuery ?? "").trim();
+    if (!query) {
+      return prettyLines.map((_line, index) => index);
+    }
+
+    const needle = normalizeSearchInput(query, pathFilterCaseSensitive);
+    const indexes: number[] = [];
+    for (let index = 0; index < prettyLines.length; index += 1) {
+      const line = normalizeSearchInput(prettyLines[index], pathFilterCaseSensitive);
+      if (line.includes(needle)) {
+        indexes.push(index);
+      }
+    }
+
+    return indexes;
+  }, [metadata, pathFilterCaseSensitive, pathFilterQuery, prettyLines]);
+
   const rowsByPath = useMemo(() => {
     if (!metadata) {
       return new Map<string, FlatJsonRow>();
@@ -392,37 +380,32 @@ export function JSONViewer({
     topSpacerHeight,
     bottomSpacerHeight
   } = useVirtualization({
-    rowCount: metadata ? filteredRows.length : lineStarts.length,
+    rowCount: metadata ? filteredRows.length : filteredPrettyLineIndexes.length,
     rowHeight,
     overscan
   });
 
   const visibleRows = filteredRows.slice(startIndex, endIndex);
   const visiblePrettyLines = useMemo(() => {
-    if (metadata || lineStarts.length === 0) {
+    if (metadata || filteredPrettyLineIndexes.length === 0) {
       return [] as string[];
     }
 
-    const text = lineSlice(prettySourceText, lineStarts, startIndex, endIndex);
-    if (!text) {
-      return [];
-    }
-    return text.split("\n");
-  }, [endIndex, lineStarts, metadata, prettySourceText, startIndex]);
+    return filteredPrettyLineIndexes
+      .slice(startIndex, endIndex)
+      .map((lineIndex) => prettyLines[lineIndex]);
+  }, [endIndex, filteredPrettyLineIndexes, metadata, prettyLines, startIndex]);
   const visiblePrettyLineNumbers = useMemo(() => {
     if (metadata || !showLineNumbers || endIndex <= startIndex) {
       return "";
     }
 
-    const count = endIndex - startIndex;
-    const numbers = new Array<string>(count);
-
-    for (let index = 0; index < count; index += 1) {
-      numbers[index] = String(startIndex + index + 1);
-    }
+    const numbers = filteredPrettyLineIndexes
+      .slice(startIndex, endIndex)
+      .map((lineIndex) => String(lineIndex + 1));
 
     return numbers.join("\n");
-  }, [endIndex, metadata, showLineNumbers, startIndex]);
+  }, [endIndex, filteredPrettyLineIndexes, metadata, showLineNumbers, startIndex]);
   const activeSelectedPath = selectedPath ?? internalSelectedPath;
 
   const resolvedTheme = resolveTheme(theme);
