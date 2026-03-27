@@ -1,186 +1,186 @@
 :root {
-  color: #172127;
-  font-family: "Space Grotesk", "Avenir Next", "Segoe UI", sans-serif;
-  line-height: 1.4;
+    color: #172127;
+    font-family: "Space Grotesk", "Avenir Next", "Segoe UI", sans-serif;
+    line-height: 1.4;
 }
 
 * {
-  box-sizing: border-box;
+    box-sizing: border-box;
 }
 
 body {
-  background:
-    radial-gradient(circle at 12% 18%, #ffeccf 0%, rgba(255, 236, 207, 0) 34%),
-    radial-gradient(circle at 88% 20%, #ddefff 0%, rgba(221, 239, 255, 0) 30%),
-    linear-gradient(145deg, #f4f1e8 0%, #e8f0f6 100%);
-  margin: 0;
-  min-height: 100vh;
+    background:
+        radial-gradient(circle at 12% 18%, #ffeccf 0%, rgba(255, 236, 207, 0) 34%),
+        radial-gradient(circle at 88% 20%, #ddefff 0%, rgba(221, 239, 255, 0) 30%),
+        linear-gradient(145deg, #f4f1e8 0%, #e8f0f6 100%);
+    margin: 0;
+    min-height: 100vh;
 }
 
 .demo-shell {
-  animation: enter 0.45s ease-out;
-  display: grid;
-  gap: 16px;
-  margin: 0 auto;
-  max-width: 1160px;
-  padding: 24px;
+    animation: enter 0.45s ease-out;
+    display: grid;
+    gap: 16px;
+    margin: 0 auto;
+    max-width: 1160px;
+    padding: 24px;
 }
 
 .demo-header {
-  background: rgba(255, 255, 255, 0.73);
-  border: 1px solid rgba(15, 39, 59, 0.1);
-  border-radius: 18px;
-  padding: 18px 20px;
+    background: rgba(255, 255, 255, 0.73);
+    border: 1px solid rgba(15, 39, 59, 0.1);
+    border-radius: 18px;
+    padding: 18px 20px;
 }
 
 .demo-header h1 {
-  font-family: "Sora", "Space Grotesk", sans-serif;
-  font-size: clamp(1.5rem, 3vw, 2.1rem);
-  letter-spacing: 0.01em;
-  margin: 0;
+    font-family: "Sora", "Space Grotesk", sans-serif;
+    font-size: clamp(1.5rem, 3vw, 2.1rem);
+    letter-spacing: 0.01em;
+    margin: 0;
 }
 
 .demo-header p {
-  margin: 8px 0 0;
-  max-width: 920px;
+    margin: 8px 0 0;
+    max-width: 920px;
 }
 
 .panel {
-  backdrop-filter: blur(2px);
-  background: rgba(255, 255, 255, 0.83);
-  border: 1px solid rgba(23, 49, 70, 0.12);
-  border-radius: 16px;
-  box-shadow: 0 8px 24px rgba(28, 54, 76, 0.08);
-  padding: 16px;
+    backdrop-filter: blur(2px);
+    background: rgba(255, 255, 255, 0.83);
+    border: 1px solid rgba(23, 49, 70, 0.12);
+    border-radius: 16px;
+    box-shadow: 0 8px 24px rgba(28, 54, 76, 0.08);
+    padding: 16px;
 }
 
 .panel h2 {
-  font-family: "Sora", "Space Grotesk", sans-serif;
-  font-size: 1.1rem;
-  margin: 0 0 10px;
+    font-family: "Sora", "Space Grotesk", sans-serif;
+    font-size: 1.1rem;
+    margin: 0 0 10px;
 }
 
 .drop-zone {
-  align-items: center;
-  border: 2px dashed #3f5b74;
-  border-radius: 14px;
-  cursor: pointer;
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  margin-bottom: 12px;
-  padding: 20px;
-  transition: transform 140ms ease, background 140ms ease;
+    align-items: center;
+    border: 2px dashed #3f5b74;
+    border-radius: 14px;
+    cursor: pointer;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    margin-bottom: 12px;
+    padding: 20px;
+    transition: transform 140ms ease, background 140ms ease;
 }
 
 .drop-zone:hover,
 .drop-zone:focus-visible {
-  background: #e9f2f9;
-  outline: none;
-  transform: translateY(-1px);
+    background: #e9f2f9;
+    outline: none;
+    transform: translateY(-1px);
 }
 
 .file-input {
-  display: none;
+    display: none;
 }
 
 .field-grid {
-  display: grid;
-  gap: 10px;
-  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    display: grid;
+    gap: 10px;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
 }
 
 .field-grid.three-col {
-  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
 }
 
 label {
-  display: grid;
-  font-size: 0.92rem;
-  gap: 5px;
+    display: grid;
+    font-size: 0.92rem;
+    gap: 5px;
 }
 
 input,
 select,
 button {
-  border: 1px solid #b4c2ce;
-  border-radius: 10px;
-  color: #14232f;
-  font: inherit;
-  padding: 8px 10px;
+    border: 1px solid #b4c2ce;
+    border-radius: 10px;
+    color: #14232f;
+    font: inherit;
+    padding: 8px 10px;
 }
 
 button {
-  background: #17486f;
-  border-color: #17486f;
-  color: #fff;
-  cursor: pointer;
-  transition: background 120ms ease;
+    background: #17486f;
+    border-color: #17486f;
+    color: #fff;
+    cursor: pointer;
+    transition: background 120ms ease;
 }
 
 button:hover {
-  background: #113b5b;
+    background: #113b5b;
 }
 
 button:disabled {
-  background: #6f8090;
-  border-color: #6f8090;
-  cursor: not-allowed;
+    background: #6f8090;
+    border-color: #6f8090;
+    cursor: not-allowed;
 }
 
 .toggle-row {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 14px;
-  margin-top: 12px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 14px;
+    margin-top: 12px;
 }
 
 .toggle-row label {
-  align-items: center;
-  display: inline-flex;
-  gap: 8px;
+    align-items: center;
+    display: inline-flex;
+    gap: 8px;
 }
 
 .status-panel ul {
-  display: grid;
-  gap: 6px;
-  margin: 0;
-  padding-left: 18px;
+    display: grid;
+    gap: 6px;
+    margin: 0;
+    padding-left: 18px;
 }
 
 .viewer-panel {
-  overflow: hidden;
+    overflow: hidden;
 }
 
 .muted {
-  color: #4b5d6b;
-  font-size: 0.9rem;
-  margin: 10px 0 0;
+    color: #4b5d6b;
+    font-size: 0.9rem;
+    margin: 10px 0 0;
 }
 
 @media (max-width: 700px) {
-  .demo-shell {
-    padding: 14px;
-  }
+    .demo-shell {
+        padding: 14px;
+    }
 
-  .panel {
-    padding: 13px;
-  }
+    .panel {
+        padding: 13px;
+    }
 
-  .toggle-row {
-    flex-direction: column;
-    align-items: flex-start;
-  }
+    .toggle-row {
+        flex-direction: column;
+        align-items: flex-start;
+    }
 }
 
 @keyframes enter {
-  from {
-    opacity: 0;
-    transform: translateY(6px);
-  }
+    from {
+        opacity: 0;
+        transform: translateY(6px);
+    }
 
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
 }

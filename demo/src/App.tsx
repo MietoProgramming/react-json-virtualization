@@ -1,9 +1,9 @@
 import React, { useCallback, useMemo, useRef, useState } from "react";
 import {
-  JSONViewer,
-  type FlatJsonRow,
-  type JsonThemeOverride,
-  type PathFilterMode
+    JSONViewer,
+    type FlatJsonRow,
+    type JsonThemeOverride,
+    type PathFilterMode
 } from "react-json-virtualization";
 
 const sampleSources = [

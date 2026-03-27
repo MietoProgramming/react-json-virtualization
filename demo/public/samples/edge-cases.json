@@ -1,29 +1,36 @@
 {
-  "emptyObject": {},
-  "emptyArray": [],
-  "nullable": null,
-  "booleans": [true, false],
-  "numbers": {
-    "int": 42,
-    "float": 3.14159,
-    "negative": -1200,
-    "zero": 0
-  },
-  "strings": {
-    "simple": "hello",
-    "escaped": "line1\\nline2",
-    "unicode": "caf\u00e9"
-  },
-  "mixed": [
-    {
-      "id": "a",
-      "meta": {
-        "created": "2026-03-20",
-        "flags": ["x", "y", "z"]
-      }
+    "emptyObject": {},
+    "emptyArray": [],
+    "nullable": null,
+    "booleans": [
+        true,
+        false
+    ],
+    "numbers": {
+        "int": 42,
+        "float": 3.14159,
+        "negative": -1200,
+        "zero": 0
     },
-    null,
-    99,
-    "text"
-  ]
+    "strings": {
+        "simple": "hello",
+        "escaped": "line1\\nline2",
+        "unicode": "caf\u00e9"
+    },
+    "mixed": [
+        {
+            "id": "a",
+            "meta": {
+                "created": "2026-03-20",
+                "flags": [
+                    "x",
+                    "y",
+                    "z"
+                ]
+            }
+        },
+        null,
+        99,
+        "text"
+    ]
 }

@@ -5,9 +5,9 @@ import {
     toggleExpandedPath
 } from "../core/expansion";
 import {
-  createPathSearchIndex,
-  filterRowsByPathQuery,
-  type PathFilterMode
+    createPathSearchIndex,
+    filterRowsByPathQuery,
+    type PathFilterMode
 } from "../core/filter";
 import { flattenJson } from "../core/flatten";
 import { parseJsonIncremental } from "../core/parser";

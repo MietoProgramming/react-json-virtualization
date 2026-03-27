@@ -1,42 +1,48 @@
 {
-  "catalog": {
-    "version": 3,
-    "generatedAt": "2026-03-27T09:30:00.000Z",
-    "sections": [
-      {
-        "slug": "hardware",
-        "items": [
-          {
-            "sku": "KB-100",
-            "name": "Mechanical Keyboard",
-            "price": 129.9,
-            "inStock": true,
-            "tags": ["input", "peripheral"]
-          },
-          {
-            "sku": "MS-210",
-            "name": "Wireless Mouse",
-            "price": 59.5,
-            "inStock": false,
-            "tags": ["input", "wireless"]
-          }
-        ]
-      },
-      {
-        "slug": "display",
-        "items": [
-          {
-            "sku": "MN-320",
-            "name": "4K Monitor",
-            "price": 399,
-            "inStock": true,
-            "spec": {
-              "resolution": "3840x2160",
-              "refreshRate": 144
+    "catalog": {
+        "version": 3,
+        "generatedAt": "2026-03-27T09:30:00.000Z",
+        "sections": [
+            {
+                "slug": "hardware",
+                "items": [
+                    {
+                        "sku": "KB-100",
+                        "name": "Mechanical Keyboard",
+                        "price": 129.9,
+                        "inStock": true,
+                        "tags": [
+                            "input",
+                            "peripheral"
+                        ]
+                    },
+                    {
+                        "sku": "MS-210",
+                        "name": "Wireless Mouse",
+                        "price": 59.5,
+                        "inStock": false,
+                        "tags": [
+                            "input",
+                            "wireless"
+                        ]
+                    }
+                ]
+            },
+            {
+                "slug": "display",
+                "items": [
+                    {
+                        "sku": "MN-320",
+                        "name": "4K Monitor",
+                        "price": 399,
+                        "inStock": true,
+                        "spec": {
+                            "resolution": "3840x2160",
+                            "refreshRate": 144
+                        }
+                    }
+                ]
             }
-          }
         ]
-      }
-    ]
-  }
+    }
 }
