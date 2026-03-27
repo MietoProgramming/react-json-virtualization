@@ -98,6 +98,27 @@ The demo will be available at:
 
 `https://<your-github-username>.github.io/react-json-virtualization/`
 
+## npm release automation
+
+This repo includes a GitHub Actions workflow that publishes the package to npm on version tags.
+
+Workflow file: `.github/workflows/release-npm.yml`
+
+Setup:
+
+1. Create an npm access token with publish permissions.
+2. Add it as a repository secret named `NPM_TOKEN`.
+3. Push a version tag like `v0.1.1` to trigger publish.
+
+Example:
+
+```bash
+npm version patch
+git push origin main --follow-tags
+```
+
+You can also run the workflow manually from the `Actions` tab using `workflow_dispatch`.
+
 ## API
 
 ### VirtualizeJSON.Collapsable props

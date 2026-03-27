@@ -2,10 +2,25 @@
     "name": "react-json-virtualization",
     "version": "0.1.0",
     "description": "Virtualized React JSON viewer for very large JSON strings with token-based color theming.",
+    "keywords": [
+        "react",
+        "json",
+        "virtualized",
+        "viewer",
+        "typescript"
+    ],
+    "homepage": "https://github.com/MietoProgramming/react-json-virtualization#readme",
+    "bugs": {
+        "url": "https://github.com/MietoProgramming/react-json-virtualization/issues"
+    },
+    "repository": {
+        "type": "git",
+        "url": "git+https://github.com/MietoProgramming/react-json-virtualization.git"
+    },
     "license": "MIT",
     "type": "module",
     "main": "dist/index.cjs",
-    "module": "dist/index.mjs",
+    "module": "dist/index.js",
     "types": "dist/index.d.ts",
     "files": [
         "dist"
@@ -13,7 +28,7 @@
     "exports": {
         ".": {
             "types": "./dist/index.d.ts",
-            "import": "./dist/index.mjs",
+            "import": "./dist/index.js",
             "require": "./dist/index.cjs"
         },
         "./styles.css": "./dist/styles.css"
@@ -24,6 +39,7 @@
     "scripts": {
         "build": "tsup src/index.ts src/styles.css --format cjs,esm --dts --clean",
         "dev": "tsup src/index.ts src/styles.css --format cjs,esm --dts --watch",
+        "prepublishOnly": "npm run typecheck && npm run test && npm run build",
         "demo": "vite --config demo/vite.config.ts",
         "demo:build": "vite build --config demo/vite.config.ts",
         "demo:preview": "vite preview --config demo/vite.config.ts",
