@@ -1,13 +1,22 @@
 import "./styles.css";
 
-export { JSONViewer } from "./components/JSONViewer";
-export type { JSONViewerProps } from "./components/JSONViewer";
+import { JSONViewer, type JSONViewerProps } from "./components/JSONViewer";
+import {
+    JSONViewerStatic,
+    type JSONViewerStaticProps
+} from "./components/JSONViewerStatic";
+
+export type VirtualizeJSONCollapsableProps = Omit<JSONViewerProps, "alwaysExpanded">;
+export type VirtualizeJSONStaticProps = JSONViewerStaticProps;
+
+export const VirtualizeJSON = {
+    Collapsable: JSONViewer,
+    Static: JSONViewerStatic
+} as const;
+
 export {
     collapsePath,
-    createExpandedPathSet,
-    expandPath,
-    expandedPathsFromDepth,
-    toggleExpandedPath
+    createExpandedPathSet, expandedPathsFromDepth, expandPath, toggleExpandedPath
 } from "./core/expansion";
 export { createPathSearchIndex, filterRowsByPathQuery } from "./core/filter";
 export type { PathFilterMode, PathSearchIndex } from "./core/filter";

@@ -43,7 +43,14 @@ const clip = (value: string): string => {
   return `${value.slice(0, PREVIEW_MAX_LENGTH - 3)}...`;
 };
 
-const makePreview = (value: JSONValue): string => {
+const hasEnumerableKey = (value: JSONObject): boolean => {
+  for (const _key in value) {
+    return true;
+  }
+  return false;
+};
+
+const makePreview = (value: JSONValue, metadata: boolean): string => {
   const type = getType(value);
 
   if (type === "null") {
@@ -56,7 +63,13 @@ const makePreview = (value: JSONValue): string => {
     return `\"${clip(value as string)}\"`;
   }
   if (type === "array") {
+    if (!metadata) {
+      return "";
+    }
     return `Array(${(value as JSONArray).length})`;
+  }
+  if (!metadata) {
+    return "";
   }
   return `Object(${Object.keys(value as JSONObject).length})`;
 };
@@ -65,7 +78,10 @@ const isExpandable = (value: JSONValue): boolean => {
   if (Array.isArray(value)) {
     return value.length > 0;
   }
-  return typeof value === "object" && value !== null && Object.keys(value).length > 0;
+  if (typeof value !== "object" || value === null) {
+    return false;
+  }
+  return hasEnumerableKey(value as JSONObject);
 };
 
 interface FlattenEntry {
@@ -75,10 +91,16 @@ interface FlattenEntry {
   depth: number;
 }
 
+interface FlattenOptions {
+  metadata?: boolean;
+}
+
 export function flattenJson(
   rootValue: JSONValue,
-  expandedPaths: ReadonlySet<string>
+  expandedPaths: ReadonlySet<string>,
+  options?: FlattenOptions
 ): FlatJsonRow[] {
+  const metadata = options?.metadata ?? true;
   const rows: FlatJsonRow[] = [];
   const stack: FlattenEntry[] = [{ value: rootValue, path: "$", depth: 0 }];
 
@@ -99,7 +121,7 @@ export function flattenJson(
       key: entry.key,
       valueType: type,
       rawValue: entry.value,
-      preview: makePreview(entry.value),
+      preview: makePreview(entry.value, metadata),
       isExpandable: expandable,
       isExpanded: expanded
     });

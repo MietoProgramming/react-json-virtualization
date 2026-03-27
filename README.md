@@ -26,7 +26,7 @@ npm install react-json-virtualization
 ## Usage
 
 ```tsx
-import { JSONViewer } from "react-json-virtualization";
+import { VirtualizeJSON } from "react-json-virtualization";
 
 const payload = JSON.stringify({
   users: [{ id: 1, name: "Ada" }, { id: 2, name: "Linus" }],
@@ -35,8 +35,9 @@ const payload = JSON.stringify({
 
 export function Example() {
   return (
-    <JSONViewer
+    <VirtualizeJSON.Collapsable
       json={payload}
+      metadata={true}
       height={480}
       rowHeight={24}
       initialExpandDepth={1}
@@ -48,6 +49,16 @@ export function Example() {
       }}
     />
   );
+}
+```
+
+Static, always-expanded viewer:
+
+```tsx
+import { VirtualizeJSON } from "react-json-virtualization";
+
+export function StaticExample({ json }: { json: string }) {
+  return <VirtualizeJSON.Static json={json} height={480} rowHeight={24} />;
 }
 ```
 
@@ -89,9 +100,11 @@ The demo will be available at:
 
 ## API
 
-### JSONViewer props
+### VirtualizeJSON.Collapsable props
 
 - `json: string` Raw JSON string input.
+- `metadata?: boolean` Enables tree metadata mode (Object/Array counts, expansion, filtering, virtualization). Default `true`. When `false`, renders a virtualized pretty-printed JSON view.
+- `showLineNumbers?: boolean` Shows line numbers in the virtualized pretty-printed JSON view (`metadata=false`). Default `true`.
 - `height?: number | string` Container height. Default `520`.
 - `rowHeight?: number` Fixed row height used by virtualization. Default `24`.
 - `overscan?: number` Number of extra rows rendered around viewport. Default `8`.
@@ -108,6 +121,22 @@ The demo will be available at:
 - `onNodeClick?: (path, row) => void` Node selection callback.
 - `onParseProgress?: (processed, total) => void` Parse progress callback.
 - `onParseError?: (error) => void` Parse error callback.
+
+### VirtualizeJSON.Static props
+
+All `VirtualizeJSON.Collapsable` props except expansion control props:
+
+- Omitted: `initialExpandDepth`
+- Omitted: `expandedPaths`
+- Omitted: `defaultExpandedPaths`
+- Omitted: `onExpandedPathsChange`
+
+`VirtualizeJSON.Static` always renders all expandable paths and disables collapse/expand interactions.
+
+### Migration (breaking change)
+
+- `JSONViewer` was renamed to `VirtualizeJSON.Collapsable`.
+- Static always-expanded mode is available as `VirtualizeJSON.Static`.
 
 ### Expansion helper exports
 

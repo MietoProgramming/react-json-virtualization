@@ -7,6 +7,7 @@ interface JSONRowProps {
   isSelected: boolean;
   onToggle: (path: string) => void;
   onSelect: (path: string) => void;
+  canToggle?: boolean;
 }
 
 const renderPrimitive = (row: FlatJsonRow): React.ReactNode => {
@@ -25,14 +26,16 @@ const renderPrimitive = (row: FlatJsonRow): React.ReactNode => {
   if (row.valueType === "array") {
     return (
       <span className="rjv-token-punctuation">
-        [ ] <span className="rjv-token-meta">{row.preview}</span>
+        [ ]
+        {row.preview && <span className="rjv-token-meta"> {row.preview}</span>}
       </span>
     );
   }
   if (row.valueType === "object") {
     return (
       <span className="rjv-token-punctuation">
-        {'{ }'} <span className="rjv-token-meta">{row.preview}</span>
+        {'{ }'}
+        {row.preview && <span className="rjv-token-meta"> {row.preview}</span>}
       </span>
     );
   }
@@ -43,9 +46,11 @@ export const JSONRow = React.memo(function JSONRow({
   row,
   isSelected,
   onToggle,
-  onSelect
+  onSelect,
+  canToggle = true
 }: JSONRowProps) {
   const className = isSelected ? "rjv-row rjv-row-selected" : "rjv-row";
+  const showToggle = canToggle && row.isExpandable;
 
   return (
     <div
@@ -59,30 +64,34 @@ export const JSONRow = React.memo(function JSONRow({
         if (event.key === "Enter") {
           onSelect(row.path);
         }
-        if (event.key === "ArrowRight" && row.isExpandable && !row.isExpanded) {
+        if (event.key === "ArrowRight" && showToggle && !row.isExpanded) {
           onToggle(row.path);
           event.preventDefault();
         }
-        if (event.key === "ArrowLeft" && row.isExpandable && row.isExpanded) {
+        if (event.key === "ArrowLeft" && showToggle && row.isExpanded) {
           onToggle(row.path);
           event.preventDefault();
         }
       }}
       style={{ paddingLeft: `${row.depth * 16 + 8}px` }}
     >
-      <button
-        className="rjv-toggle"
-        type="button"
-        onClick={(event: MouseEvent<HTMLButtonElement>) => {
-          event.stopPropagation();
-          if (row.isExpandable) {
+      {showToggle ? (
+        <button
+          className="rjv-toggle"
+          type="button"
+          onClick={(event: MouseEvent<HTMLButtonElement>) => {
+            event.stopPropagation();
             onToggle(row.path);
-          }
-        }}
-        aria-label={row.isExpanded ? "Collapse node" : "Expand node"}
-      >
-        {row.isExpandable ? (row.isExpanded ? "▾" : "▸") : " "}
-      </button>
+          }}
+          aria-label={row.isExpanded ? "Collapse node" : "Expand node"}
+        >
+          {row.isExpanded ? "▾" : "▸"}
+        </button>
+      ) : (
+        <span className="rjv-toggle" aria-hidden="true">
+          
+        </span>
+      )}
 
       {row.key !== undefined ? (
         <>

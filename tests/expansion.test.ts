@@ -39,4 +39,19 @@ describe("expansion helpers", () => {
     expect(paths.has("$.users[0]")).toBe(true);
     expect(paths.has("$.users[0].profile")).toBe(false);
   });
+
+  it("expands all non-leaf containers with infinity depth", () => {
+    const data = {
+      users: [{ profile: { name: "Ada" } }],
+      meta: { count: 1 }
+    };
+    const paths = expandedPathsFromDepth(data, Number.POSITIVE_INFINITY);
+
+    expect(paths.has("$")).toBe(true);
+    expect(paths.has("$.users")).toBe(true);
+    expect(paths.has("$.users[0]")).toBe(true);
+    expect(paths.has("$.users[0].profile")).toBe(true);
+    expect(paths.has("$.meta")).toBe(true);
+    expect(paths.has("$.meta.count")).toBe(false);
+  });
 });

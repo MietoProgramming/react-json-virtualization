@@ -1,9 +1,9 @@
 import React, { useCallback, useMemo, useRef, useState } from "react";
 import {
-    JSONViewer,
-    type FlatJsonRow,
-    type JsonThemeOverride,
-    type PathFilterMode
+  VirtualizeJSON,
+  type FlatJsonRow,
+  type JsonThemeOverride,
+  type PathFilterMode
 } from "react-json-virtualization";
 
 const sampleSources = [
@@ -60,6 +60,7 @@ async function readFileAsText(file: File): Promise<string> {
 }
 
 export function App(): React.ReactElement {
+  const [viewerMode, setViewerMode] = useState<"collapsable" | "static">("collapsable");
   const [jsonText, setJsonText] = useState<string>("{}");
   const [activeSamplePath, setActiveSamplePath] = useState<string>(sampleSources[0].path);
   const [isLoadingSample, setIsLoadingSample] = useState(false);
@@ -68,6 +69,8 @@ export function App(): React.ReactElement {
   const [height, setHeight] = useState<number>(520);
   const [rowHeight, setRowHeight] = useState<number>(24);
   const [overscan, setOverscan] = useState<number>(8);
+  const [metadata, setMetadata] = useState<boolean>(true);
+  const [showLineNumbers, setShowLineNumbers] = useState<boolean>(true);
   const [initialExpandDepth, setInitialExpandDepth] = useState<number>(1);
 
   const [pathFilterQuery, setPathFilterQuery] = useState<string>("");
@@ -275,6 +278,44 @@ export function App(): React.ReactElement {
               value={overscan}
               onChange={(event) => setOverscan(Number(event.target.value))}
             />
+          </label></div>
+
+         <div className="field-grid four-col">
+
+          <label>
+            Metadata
+            <select
+              value={metadata ? "enabled" : "disabled"}
+              onChange={(event) => setMetadata(event.target.value === "enabled")}
+            >
+              <option value="enabled">enabled (tree + Object/Array meta)</option>
+              <option value="disabled">disabled (virtualized pretty JSON)</option>
+            </select>
+          </label>
+
+          <label>
+            Pretty line numbers
+            <select
+              value={showLineNumbers ? "on" : "off"}
+              onChange={(event) => setShowLineNumbers(event.target.value === "on")}
+              disabled={metadata}
+            >
+              <option value="on">on</option>
+              <option value="off">off</option>
+            </select>
+          </label>
+
+          <label>
+            Viewer mode
+            <select
+              value={viewerMode}
+              onChange={(event) =>
+                setViewerMode(event.target.value as "collapsable" | "static")
+              }
+            >
+              <option value="collapsable">Collapsable</option>
+              <option value="static">Static</option>
+            </select>
           </label>
 
           <label>
@@ -284,6 +325,7 @@ export function App(): React.ReactElement {
               min={0}
               max={8}
               value={initialExpandDepth}
+              disabled={viewerMode === "static"}
               onChange={(event) => setInitialExpandDepth(Number(event.target.value))}
             />
           </label>
@@ -341,6 +383,7 @@ export function App(): React.ReactElement {
             <input
               type="checkbox"
               checked={isControlledExpansion}
+              disabled={viewerMode === "static"}
               onChange={(event) => setIsControlledExpansion(event.target.checked)}
             />
             Use controlled expansion
@@ -364,8 +407,13 @@ export function App(): React.ReactElement {
         <ul>
           <li>Parse progress: {parseProgressLabel}</li>
           <li>Parse error: {hasViewerError ? parseError : "none"}</li>
+          <li>Viewer mode: {viewerMode}</li>
+          <li>Metadata mode: {metadata ? "enabled" : "disabled"}</li>
+          <li>Pretty line numbers: {metadata ? "n/a" : showLineNumbers ? "on" : "off"}</li>
           <li>Selected path: {selectedPath}</li>
-          <li>Controlled expanded paths: {expandedPaths.size}</li>
+          <li>
+            Controlled expanded paths: {viewerMode === "collapsable" ? expandedPaths.size : "n/a (static)"}
+          </li>
           <li>
             Last clicked node: {lastClickedRow ? `${lastClickedRow.path} (${lastClickedRow.valueType})` : "none"}
           </li>
@@ -374,32 +422,60 @@ export function App(): React.ReactElement {
 
       <section className="panel viewer-panel">
         <h2>JSON Viewer</h2>
-        <JSONViewer
-          json={jsonText}
-          height={height}
-          rowHeight={rowHeight}
-          overscan={overscan}
-          initialExpandDepth={initialExpandDepth}
-          expandedPaths={isControlledExpansion ? expandedPaths : undefined}
-          onExpandedPathsChange={(nextPaths) => {
-            setExpandedPaths(new Set<string>(nextPaths));
-          }}
-          pathFilterQuery={pathFilterQuery}
-          pathFilterCaseSensitive={pathFilterCaseSensitive}
-          pathFilterMode={pathFilterMode}
-          theme={selectedTheme}
-          selectedPath={selectedPath}
-          onNodeClick={(path, row) => {
-            setSelectedPath(path);
-            setLastClickedRow(row);
-          }}
-          onParseProgress={(processed, total) => {
-            setParseProgress({ processed, total });
-          }}
-          onParseError={(error) => {
-            setParseError(error.message);
-          }}
-        />
+        {viewerMode === "collapsable" ? (
+          <VirtualizeJSON.Collapsable
+            json={jsonText}
+            metadata={metadata}
+            showLineNumbers={showLineNumbers}
+            height={height}
+            rowHeight={rowHeight}
+            overscan={overscan}
+            initialExpandDepth={initialExpandDepth}
+            expandedPaths={isControlledExpansion ? expandedPaths : undefined}
+            onExpandedPathsChange={(nextPaths) => {
+              setExpandedPaths(new Set<string>(nextPaths));
+            }}
+            pathFilterQuery={pathFilterQuery}
+            pathFilterCaseSensitive={pathFilterCaseSensitive}
+            pathFilterMode={pathFilterMode}
+            theme={selectedTheme}
+            selectedPath={selectedPath}
+            onNodeClick={(path, row) => {
+              setSelectedPath(path);
+              setLastClickedRow(row);
+            }}
+            onParseProgress={(processed, total) => {
+              setParseProgress({ processed, total });
+            }}
+            onParseError={(error) => {
+              setParseError(error.message);
+            }}
+          />
+        ) : (
+          <VirtualizeJSON.Static
+            json={jsonText}
+            metadata={metadata}
+            showLineNumbers={showLineNumbers}
+            height={height}
+            rowHeight={rowHeight}
+            overscan={overscan}
+            pathFilterQuery={pathFilterQuery}
+            pathFilterCaseSensitive={pathFilterCaseSensitive}
+            pathFilterMode={pathFilterMode}
+            theme={selectedTheme}
+            selectedPath={selectedPath}
+            onNodeClick={(path, row) => {
+              setSelectedPath(path);
+              setLastClickedRow(row);
+            }}
+            onParseProgress={(processed, total) => {
+              setParseProgress({ processed, total });
+            }}
+            onParseError={(error) => {
+              setParseError(error.message);
+            }}
+          />
+        )}
       </section>
     </main>
   );
