@@ -1,126 +1,14 @@
-import React, { useEffect, useMemo, useRef, useState } from "react";
-import {
-  createExpandedPathSet,
-  expandedPathsFromDepth,
-  toggleExpandedPath
-} from "../core/expansion";
-import {
-  createPathSearchIndex,
-  filterRowsByPathQuery,
-  type PathFilterMode
-} from "../core/filter";
-import { flattenJson } from "../core/flatten";
-import { parseJsonIncremental } from "../core/parser";
-import type { FlatJsonRow, JSONValue } from "../core/types";
+import React, { useMemo, useState } from "react";
+import { createExpandedPathSet, expandedPathsFromDepth } from "../core/expansion";
+import { type PathFilterMode } from "../core/filter";
+import type { FlatJsonRow } from "../core/types";
 import { useVirtualization } from "../hooks/useVirtualization";
 import { resolveTheme, type JsonThemeOverride } from "../theme";
-import { JSONRow } from "./JSONRow";
-
-const normalizeSearchInput = (value: string, caseSensitive: boolean): string => {
-  return caseSensitive ? value : value.toLowerCase();
-};
-
-interface PrettyToken {
-  text: string;
-  className?: string;
-}
-
-const isDelimiter = (char: string | undefined): boolean => {
-  return char === undefined || /[\s,\]\}\:]/.test(char);
-};
-
-const tokenizePrettyLine = (line: string): PrettyToken[] => {
-  const tokens: PrettyToken[] = [];
-  let index = 0;
-
-  while (index < line.length) {
-    const char = line[index];
-
-    if (char === '"') {
-      let cursor = index + 1;
-      let escaped = false;
-
-      while (cursor < line.length) {
-        const current = line[cursor];
-        if (escaped) {
-          escaped = false;
-          cursor += 1;
-          continue;
-        }
-        if (current === "\\") {
-          escaped = true;
-          cursor += 1;
-          continue;
-        }
-        if (current === '"') {
-          cursor += 1;
-          break;
-        }
-        cursor += 1;
-      }
-
-      const text = line.slice(index, cursor);
-      const tail = line.slice(cursor);
-      const isKey = /^\s*:/.test(tail);
-      tokens.push({ text, className: isKey ? "rjv-token-key" : "rjv-token-string" });
-      index = cursor;
-      continue;
-    }
-
-    if (char === "-" || (char >= "0" && char <= "9")) {
-      const match = line.slice(index).match(/^-?(?:0|[1-9]\d*)(?:\.\d+)?(?:[eE][+-]?\d+)?/);
-      if (match) {
-        tokens.push({ text: match[0], className: "rjv-token-number" });
-        index += match[0].length;
-        continue;
-      }
-    }
-
-    if (line.startsWith("true", index) && isDelimiter(line[index + 4])) {
-      tokens.push({ text: "true", className: "rjv-token-boolean" });
-      index += 4;
-      continue;
-    }
-
-    if (line.startsWith("false", index) && isDelimiter(line[index + 5])) {
-      tokens.push({ text: "false", className: "rjv-token-boolean" });
-      index += 5;
-      continue;
-    }
-
-    if (line.startsWith("null", index) && isDelimiter(line[index + 4])) {
-      tokens.push({ text: "null", className: "rjv-token-null" });
-      index += 4;
-      continue;
-    }
-
-    if (/[\[\]{}:,]/.test(char)) {
-      tokens.push({ text: char, className: "rjv-token-punctuation" });
-      index += 1;
-      continue;
-    }
-
-    let cursor = index + 1;
-    while (cursor < line.length) {
-      const current = line[cursor];
-      if (current === '"' || /[\[\]{}:,]/.test(current)) {
-        break;
-      }
-      if ((current === "-" || (current >= "0" && current <= "9")) && isDelimiter(line[cursor - 1])) {
-        break;
-      }
-      if (line.startsWith("true", cursor) || line.startsWith("false", cursor) || line.startsWith("null", cursor)) {
-        break;
-      }
-      cursor += 1;
-    }
-
-    tokens.push({ text: line.slice(index, cursor) });
-    index = cursor;
-  }
-
-  return tokens;
-};
+import { JSONViewerPlainContent } from "./jsonViewer/JSONViewerPlainContent";
+import { JSONViewerTreeContent } from "./jsonViewer/JSONViewerTreeContent";
+import { useParsedJsonState } from "./jsonViewer/useParsedJsonState";
+import { useViewerContent } from "./jsonViewer/useViewerContent";
+import { useViewerInteractions } from "./jsonViewer/useViewerInteractions";
 
 export interface JSONViewerProps {
   json: string;
@@ -167,22 +55,20 @@ export function JSONViewer({
   onParseProgress,
   onParseError
 }: JSONViewerProps): React.ReactElement {
-  const [root, setRoot] = useState<JSONValue | null>(null);
-  const [error, setError] = useState<string | null>(null);
-  const [isParsing, setIsParsing] = useState(false);
-  const [internalExpandedPaths, setInternalExpandedPaths] = useState<Set<string>>(() =>
-    createExpandedPathSet(defaultExpandedPaths)
-  );
-  const [internalSelectedPath, setInternalSelectedPath] = useState<string>("$");
-  const onParseProgressRef = useRef(onParseProgress);
-  const onParseErrorRef = useRef(onParseError);
-  const onExpandedPathsChangeRef = useRef(onExpandedPathsChange);
-
-  onParseProgressRef.current = onParseProgress;
-  onParseErrorRef.current = onParseError;
-  onExpandedPathsChangeRef.current = onExpandedPathsChange;
-
   const isExpandedControlled = expandedPaths !== undefined;
+  const { root, error, isParsing, internalExpandedPaths, setInternalExpandedPaths } = useParsedJsonState({
+    json,
+    metadata,
+    alwaysExpanded,
+    initialExpandDepth,
+    defaultExpandedPaths,
+    isExpandedControlled,
+    onParseProgress,
+    onParseError,
+    onExpandedPathsChange
+  });
+  const [internalSelectedPath, setInternalSelectedPath] = useState<string>("$");
+
   const fullyExpandedPaths = useMemo(() => {
     if (!metadata || root === null) {
       return createExpandedPathSet();
@@ -201,176 +87,15 @@ export function JSONViewer({
     [alwaysExpanded, expandedPaths, fullyExpandedPaths, internalExpandedPaths, metadata]
   );
 
-  const prettySourceText = useMemo(() => {
-    if (metadata) {
-      return "";
-    }
-
-    if (json.includes("\n") || json.includes("\r")) {
-      return json;
-    }
-
-    try {
-      return JSON.stringify(JSON.parse(json), null, 2);
-    } catch {
-      return json;
-    }
-  }, [json, metadata]);
-
-  const prettyLines = useMemo(() => {
-    if (metadata) {
-      return [] as string[];
-    }
-    return prettySourceText.split(/\r?\n/);
-  }, [metadata, prettySourceText]);
-
-  useEffect(() => {
-    if (!metadata) {
-      setIsParsing(false);
-      setError(null);
-      return;
-    }
-
-    let mounted = true;
-    const controller = new AbortController();
-
-    const parse = async (): Promise<void> => {
-      setIsParsing(true);
-      setError(null);
-
-      try {
-        const parsed = await parseJsonIncremental(json, {
-          signal: controller.signal,
-          onProgress: (processedChars, totalChars) => {
-            onParseProgressRef.current?.(processedChars, totalChars);
-          }
-        });
-
-        if (!mounted) {
-          return;
-        }
-
-        setRoot(parsed);
-
-        if (!metadata) {
-          return;
-        }
-
-        const nextExpanded =
-          alwaysExpanded
-            ? expandedPathsFromDepth(parsed, Number.POSITIVE_INFINITY)
-            : defaultExpandedPaths === undefined
-            ? expandedPathsFromDepth(parsed, initialExpandDepth)
-            : createExpandedPathSet(defaultExpandedPaths);
-
-        if (!isExpandedControlled) {
-          setInternalExpandedPaths(nextExpanded);
-        }
-        onExpandedPathsChangeRef.current?.(nextExpanded);
-      } catch (candidateError) {
-        if (!mounted || controller.signal.aborted) {
-          return;
-        }
-
-        const normalized =
-          candidateError instanceof Error
-            ? candidateError
-            : new Error("Unknown JSON parse error");
-
-        setError(normalized.message);
-        onParseErrorRef.current?.(normalized);
-      } finally {
-        if (mounted) {
-          setIsParsing(false);
-        }
-      }
-    };
-
-    parse();
-
-    return () => {
-      mounted = false;
-      controller.abort();
-    };
-  }, [
-    alwaysExpanded,
-    defaultExpandedPaths,
-    initialExpandDepth,
-    isExpandedControlled,
+  const { filteredRows, rowsByPath, prettyLines, filteredPrettyLineIndexes, filteredItemCount } = useViewerContent({
+    metadata,
     json,
-    metadata
-  ]);
-
-  const rows = useMemo(() => {
-    if (!metadata || root === null) {
-      return [];
-    }
-    return flattenJson(root, activeExpandedPaths, { metadata });
-  }, [activeExpandedPaths, metadata, root]);
-
-  const normalizedFilterQuery = metadata ? (pathFilterQuery ?? "").trim() : "";
-  const resolvedFilterMode: Exclude<PathFilterMode, "auto"> =
-    pathFilterMode === "auto"
-      ? normalizedFilterQuery.startsWith("$")
-        ? "prefix"
-        : "includes"
-      : pathFilterMode;
-
-  const pathSearchIndex = useMemo(() => {
-    if (!metadata) {
-      return undefined;
-    }
-    if (!normalizedFilterQuery || resolvedFilterMode !== "prefix") {
-      return undefined;
-    }
-    return createPathSearchIndex(rows, { caseSensitive: pathFilterCaseSensitive });
-  }, [metadata, normalizedFilterQuery, pathFilterCaseSensitive, resolvedFilterMode, rows]);
-
-  const filteredRows = useMemo(
-    () =>
-      !metadata
-        ? []
-        :
-      filterRowsByPathQuery(rows, pathFilterQuery, {
-        caseSensitive: pathFilterCaseSensitive,
-        mode: resolvedFilterMode,
-        index: pathSearchIndex
-      }),
-    [metadata, pathFilterCaseSensitive, pathFilterQuery, pathSearchIndex, resolvedFilterMode, rows]
-  );
-
-  const filteredPrettyLineIndexes = useMemo(() => {
-    if (metadata) {
-      return [] as number[];
-    }
-
-    const query = (pathFilterQuery ?? "").trim();
-    if (!query) {
-      return prettyLines.map((_line, index) => index);
-    }
-
-    const needle = normalizeSearchInput(query, pathFilterCaseSensitive);
-    const indexes: number[] = [];
-    for (let index = 0; index < prettyLines.length; index += 1) {
-      const line = normalizeSearchInput(prettyLines[index], pathFilterCaseSensitive);
-      if (line.includes(needle)) {
-        indexes.push(index);
-      }
-    }
-
-    return indexes;
-  }, [metadata, pathFilterCaseSensitive, pathFilterQuery, prettyLines]);
-
-  const rowsByPath = useMemo(() => {
-    if (!metadata) {
-      return new Map<string, FlatJsonRow>();
-    }
-    const index = new Map<string, FlatJsonRow>();
-    rows.forEach((row) => {
-      index.set(row.path, row);
-    });
-    return index;
-  }, [metadata, rows]);
+    root,
+    activeExpandedPaths,
+    pathFilterQuery,
+    pathFilterCaseSensitive,
+    pathFilterMode
+  });
 
   const {
     containerRef,
@@ -380,13 +105,13 @@ export function JSONViewer({
     topSpacerHeight,
     bottomSpacerHeight
   } = useVirtualization({
-    rowCount: metadata ? filteredRows.length : filteredPrettyLineIndexes.length,
+    rowCount: filteredItemCount,
     rowHeight,
     overscan
   });
 
-  const visibleRows = filteredRows.slice(startIndex, endIndex);
-  const visiblePrettyLines = useMemo(() => {
+  const virtualizedRows = filteredRows.slice(startIndex, endIndex);
+  const virtualizedPrettyLines = useMemo(() => {
     if (metadata || filteredPrettyLineIndexes.length === 0) {
       return [] as string[];
     }
@@ -395,18 +120,28 @@ export function JSONViewer({
       .slice(startIndex, endIndex)
       .map((lineIndex) => prettyLines[lineIndex]);
   }, [endIndex, filteredPrettyLineIndexes, metadata, prettyLines, startIndex]);
-  const visiblePrettyLineNumbers = useMemo(() => {
+  const virtualizedPrettyLineNumbers = useMemo(() => {
     if (metadata || !showLineNumbers || endIndex <= startIndex) {
       return "";
     }
 
-    const numbers = filteredPrettyLineIndexes
+    return filteredPrettyLineIndexes
       .slice(startIndex, endIndex)
-      .map((lineIndex) => String(lineIndex + 1));
-
-    return numbers.join("\n");
+      .map((lineIndex) => String(lineIndex + 1))
+      .join("\n");
   }, [endIndex, filteredPrettyLineIndexes, metadata, showLineNumbers, startIndex]);
   const activeSelectedPath = selectedPath ?? internalSelectedPath;
+
+  const { onToggle, onSelect } = useViewerInteractions({
+    alwaysExpanded,
+    isExpandedControlled,
+    activeExpandedPaths,
+    setInternalExpandedPaths,
+    onExpandedPathsChange,
+    rowsByPath,
+    setInternalSelectedPath,
+    onNodeClick
+  });
 
   const resolvedTheme = resolveTheme(theme);
 
@@ -424,31 +159,6 @@ export function JSONViewer({
     "--rjv-focus-ring": resolvedTheme.focusRing
   } as React.CSSProperties;
 
-  const onToggle = (path: string): void => {
-    if (alwaysExpanded) {
-      return;
-    }
-
-    if (isExpandedControlled) {
-      onExpandedPathsChangeRef.current?.(toggleExpandedPath(activeExpandedPaths, path));
-      return;
-    }
-
-    setInternalExpandedPaths((current: Set<string>) => {
-      const next = toggleExpandedPath(current, path);
-      onExpandedPathsChangeRef.current?.(next);
-      return next;
-    });
-  };
-
-  const onSelect = (path: string): void => {
-    setInternalSelectedPath(path);
-    const row = rowsByPath.get(path);
-    if (row) {
-      onNodeClick?.(path, row);
-    }
-  };
-
   const rootClassName = className ? `rjv-container ${className}` : "rjv-container";
   const rootRole = metadata ? "tree" : "region";
 
@@ -464,50 +174,25 @@ export function JSONViewer({
       {!isParsing && error && <div className="rjv-status rjv-status-error">{error}</div>}
       {!isParsing && !error && (
         metadata ? (
-          <>
-            <div style={{ height: `${topSpacerHeight}px` }} />
-            {visibleRows.map((row: FlatJsonRow) => (
-              <JSONRow
-                key={row.id}
-                row={row}
-                isSelected={activeSelectedPath === row.path}
-                onToggle={onToggle}
-                onSelect={onSelect}
-                canToggle={!alwaysExpanded}
-              />
-            ))}
-            <div style={{ height: `${bottomSpacerHeight}px` }} />
-          </>
+          <JSONViewerTreeContent
+            topSpacerHeight={topSpacerHeight}
+            bottomSpacerHeight={bottomSpacerHeight}
+            visibleRows={virtualizedRows}
+            activeSelectedPath={activeSelectedPath}
+            alwaysExpanded={alwaysExpanded}
+            onToggle={onToggle}
+            onSelect={onSelect}
+          />
         ) : (
-          <>
-            <div style={{ height: `${topSpacerHeight}px` }} />
-            <div className="rjv-plain-frame">
-              {showLineNumbers && (
-                <pre className="rjv-plain-gutter" style={{ lineHeight: `${rowHeight}px` }}>
-                  {visiblePrettyLineNumbers || " "}
-                </pre>
-              )}
-              <div className="rjv-plain-window" style={{ lineHeight: `${rowHeight}px` }}>
-                {visiblePrettyLines.length === 0 ? (
-                  <div className="rjv-plain-line">&nbsp;</div>
-                ) : (
-                  visiblePrettyLines.map((line, lineOffset) => (
-                    <div className="rjv-plain-line" key={startIndex + lineOffset}>
-                      {tokenizePrettyLine(line).map((token, tokenIndex) => (
-                        <span
-                          key={`${startIndex + lineOffset}-${tokenIndex}`}
-                          className={token.className}
-                        >
-                          {token.text || " "}
-                        </span>
-                      ))}
-                    </div>
-                  ))
-                )}
-              </div>
-            </div>
-            <div style={{ height: `${bottomSpacerHeight}px` }} />
-          </>
+          <JSONViewerPlainContent
+            topSpacerHeight={topSpacerHeight}
+            bottomSpacerHeight={bottomSpacerHeight}
+            showLineNumbers={showLineNumbers}
+            rowHeight={rowHeight}
+            startIndex={startIndex}
+            visiblePrettyLines={virtualizedPrettyLines}
+            visiblePrettyLineNumbers={virtualizedPrettyLineNumbers}
+          />
         )
       )}
     </div>
