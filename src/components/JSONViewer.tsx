@@ -1,4 +1,14 @@
 import React, { useEffect, useMemo, useState } from "react";
+import {
+    createExpandedPathSet,
+    expandedPathsFromDepth,
+    toggleExpandedPath
+} from "../core/expansion";
+import {
+  createPathSearchIndex,
+  filterRowsByPathQuery,
+  type PathFilterMode
+} from "../core/filter";
 import { flattenJson } from "../core/flatten";
 import { parseJsonIncremental } from "../core/parser";
 import type { FlatJsonRow, JSONValue } from "../core/types";
@@ -6,16 +16,18 @@ import { useVirtualization } from "../hooks/useVirtualization";
 import { resolveTheme, type JsonThemeOverride } from "../theme";
 import { JSONRow } from "./JSONRow";
 
-interface JsonObjectLike {
-  [key: string]: JSONValue;
-}
-
 export interface JSONViewerProps {
   json: string;
   height?: number | string;
   rowHeight?: number;
   overscan?: number;
   initialExpandDepth?: number;
+  expandedPaths?: ReadonlySet<string>;
+  defaultExpandedPaths?: Iterable<string>;
+  onExpandedPathsChange?: (paths: Set<string>) => void;
+  pathFilterQuery?: string;
+  pathFilterCaseSensitive?: boolean;
+  pathFilterMode?: PathFilterMode;
   theme?: JsonThemeOverride;
   selectedPath?: string;
   className?: string;
@@ -24,48 +36,18 @@ export interface JSONViewerProps {
   onParseError?: (error: Error) => void;
 }
 
-const isContainer = (value: JSONValue): boolean => {
-  return (
-    Array.isArray(value) ||
-    (typeof value === "object" && value !== null && !Array.isArray(value))
-  );
-};
-
-const collectInitialExpandedPaths = (
-  value: JSONValue,
-  maxDepth: number,
-  currentPath: string,
-  depth: number,
-  paths: Set<string>
-): void => {
-  if (!isContainer(value) || depth >= maxDepth) {
-    return;
-  }
-
-  paths.add(currentPath);
-
-  if (Array.isArray(value)) {
-    value.forEach((item, index) => {
-      collectInitialExpandedPaths(item, maxDepth, `${currentPath}[${index}]`, depth + 1, paths);
-    });
-    return;
-  }
-
-  const objectValue = value as JsonObjectLike;
-  Object.entries(objectValue).forEach(([key, child]: [string, JSONValue]) => {
-    const escapedKey = /^[$A-Z_a-z][$\w]*$/.test(key)
-      ? `${currentPath}.${key}`
-      : `${currentPath}[\"${key.replace(/\\/g, "\\\\").replace(/\"/g, "\\\"")}\"]`;
-    collectInitialExpandedPaths(child, maxDepth, escapedKey, depth + 1, paths);
-  });
-};
-
 export function JSONViewer({
   json,
   height = 520,
   rowHeight = 24,
   overscan = 8,
   initialExpandDepth = 1,
+  expandedPaths,
+  defaultExpandedPaths,
+  onExpandedPathsChange,
+  pathFilterQuery,
+  pathFilterCaseSensitive = false,
+  pathFilterMode = "auto",
   theme,
   selectedPath,
   className,
@@ -76,8 +58,15 @@ export function JSONViewer({
   const [root, setRoot] = useState<JSONValue | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isParsing, setIsParsing] = useState(false);
-  const [expandedPaths, setExpandedPaths] = useState<Set<string>>(new Set(["$"]));
+  const [internalExpandedPaths, setInternalExpandedPaths] = useState<Set<string>>(() =>
+    createExpandedPathSet(defaultExpandedPaths)
+  );
   const [internalSelectedPath, setInternalSelectedPath] = useState<string>("$");
+  const isExpandedControlled = expandedPaths !== undefined;
+  const activeExpandedPaths = useMemo(
+    () => createExpandedPathSet(expandedPaths ?? internalExpandedPaths),
+    [expandedPaths, internalExpandedPaths]
+  );
 
   useEffect(() => {
     let mounted = true;
@@ -99,9 +88,15 @@ export function JSONViewer({
 
         setRoot(parsed);
 
-        const nextExpanded = new Set<string>(["$"]);
-        collectInitialExpandedPaths(parsed, initialExpandDepth, "$", 0, nextExpanded);
-        setExpandedPaths(nextExpanded);
+        const nextExpanded =
+          defaultExpandedPaths === undefined
+            ? expandedPathsFromDepth(parsed, initialExpandDepth)
+            : createExpandedPathSet(defaultExpandedPaths);
+
+        if (!isExpandedControlled) {
+          setInternalExpandedPaths(nextExpanded);
+        }
+        onExpandedPathsChange?.(nextExpanded);
       } catch (candidateError) {
         if (!mounted || controller.signal.aborted) {
           return;
@@ -127,14 +122,47 @@ export function JSONViewer({
       mounted = false;
       controller.abort();
     };
-  }, [initialExpandDepth, json, onParseError, onParseProgress]);
+  }, [
+    defaultExpandedPaths,
+    initialExpandDepth,
+    isExpandedControlled,
+    json,
+    onExpandedPathsChange,
+    onParseError,
+    onParseProgress
+  ]);
 
   const rows = useMemo(() => {
     if (root === null) {
       return [];
     }
-    return flattenJson(root, expandedPaths);
-  }, [expandedPaths, root]);
+    return flattenJson(root, activeExpandedPaths);
+  }, [activeExpandedPaths, root]);
+
+  const normalizedFilterQuery = (pathFilterQuery ?? "").trim();
+  const resolvedFilterMode: Exclude<PathFilterMode, "auto"> =
+    pathFilterMode === "auto"
+      ? normalizedFilterQuery.startsWith("$")
+        ? "prefix"
+        : "includes"
+      : pathFilterMode;
+
+  const pathSearchIndex = useMemo(() => {
+    if (!normalizedFilterQuery || resolvedFilterMode !== "prefix") {
+      return undefined;
+    }
+    return createPathSearchIndex(rows, { caseSensitive: pathFilterCaseSensitive });
+  }, [normalizedFilterQuery, pathFilterCaseSensitive, resolvedFilterMode, rows]);
+
+  const filteredRows = useMemo(
+    () =>
+      filterRowsByPathQuery(rows, pathFilterQuery, {
+        caseSensitive: pathFilterCaseSensitive,
+        mode: resolvedFilterMode,
+        index: pathSearchIndex
+      }),
+    [pathFilterCaseSensitive, pathFilterQuery, pathSearchIndex, resolvedFilterMode, rows]
+  );
 
   const {
     containerRef,
@@ -144,12 +172,12 @@ export function JSONViewer({
     topSpacerHeight,
     bottomSpacerHeight
   } = useVirtualization({
-    rowCount: rows.length,
+    rowCount: filteredRows.length,
     rowHeight,
     overscan
   });
 
-  const visibleRows = rows.slice(startIndex, endIndex);
+  const visibleRows = filteredRows.slice(startIndex, endIndex);
   const activeSelectedPath = selectedPath ?? internalSelectedPath;
 
   const resolvedTheme = resolveTheme(theme);
@@ -169,13 +197,14 @@ export function JSONViewer({
   } as React.CSSProperties;
 
   const onToggle = (path: string): void => {
-    setExpandedPaths((current: Set<string>) => {
-      const next = new Set(current);
-      if (next.has(path)) {
-        next.delete(path);
-      } else {
-        next.add(path);
-      }
+    if (isExpandedControlled) {
+      onExpandedPathsChange?.(toggleExpandedPath(activeExpandedPaths, path));
+      return;
+    }
+
+    setInternalExpandedPaths((current: Set<string>) => {
+      const next = toggleExpandedPath(current, path);
+      onExpandedPathsChange?.(next);
       return next;
     });
   };

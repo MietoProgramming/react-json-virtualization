@@ -24,12 +24,21 @@
     "scripts": {
         "build": "tsup src/index.ts src/styles.css --format cjs,esm --dts --clean",
         "dev": "tsup src/index.ts src/styles.css --format cjs,esm --dts --watch",
+        "demo": "vite --config demo/vite.config.ts",
+        "demo:build": "vite build --config demo/vite.config.ts",
+        "demo:preview": "vite preview --config demo/vite.config.ts",
+        "bench:generate": "node bench/generate-fixtures.mjs",
+        "bench:parse": "npm run build && node bench/run-parse-benchmark.mjs",
         "typecheck": "tsc --noEmit",
         "test": "vitest run"
     },
     "devDependencies": {
+        "@vitejs/plugin-react": "^5.0.4",
         "@types/react": "^18.3.12",
         "@types/react-dom": "^18.3.1",
+        "react": "^18.3.1",
+        "react-dom": "^18.3.1",
+        "vite": "^7.1.8",
         "typescript": "^5.7.2",
         "tsup": "^8.3.5",
         "vitest": "^2.1.4",
