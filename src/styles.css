@@ -1,0 +1,78 @@
+.rjv-container {
+    background: var(--rjv-background);
+    border: 1px solid #d4d2cb;
+    border-radius: 10px;
+    color: #1f2329;
+    font-family: "IBM Plex Mono", "JetBrains Mono", Menlo, Consolas, monospace;
+    font-size: 13px;
+    line-height: 24px;
+    overflow: auto;
+    width: 100%;
+}
+
+.rjv-row {
+    align-items: center;
+    cursor: default;
+    display: flex;
+    min-height: 24px;
+    white-space: nowrap;
+}
+
+.rjv-row:hover {
+    background: var(--rjv-row-hover);
+}
+
+.rjv-row:focus-visible {
+    outline: 2px solid var(--rjv-focus-ring);
+    outline-offset: -2px;
+}
+
+.rjv-row-selected {
+    background: var(--rjv-row-selected);
+}
+
+.rjv-toggle {
+    background: transparent;
+    border: 0;
+    color: var(--rjv-token-punctuation);
+    cursor: pointer;
+    font-size: 12px;
+    margin-right: 4px;
+    width: 14px;
+}
+
+.rjv-token-key {
+    color: var(--rjv-token-key);
+}
+
+.rjv-token-punctuation {
+    color: var(--rjv-token-punctuation);
+}
+
+.rjv-token-string {
+    color: var(--rjv-token-string);
+}
+
+.rjv-token-number {
+    color: var(--rjv-token-number);
+}
+
+.rjv-token-boolean {
+    color: var(--rjv-token-boolean);
+}
+
+.rjv-token-null {
+    color: var(--rjv-token-null);
+}
+
+.rjv-token-meta {
+    opacity: 0.8;
+}
+
+.rjv-status {
+    padding: 10px 12px;
+}
+
+.rjv-status-error {
+    color: #8b1f1f;
+}
