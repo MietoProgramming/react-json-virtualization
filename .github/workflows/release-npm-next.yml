@@ -1,0 +1,45 @@
+name: Release Package To npm (next)
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  publish-next:
+    # Avoid publishing on stable tag pushes handled by release-npm.yml.
+    if: github.ref_type != 'tag'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          registry-url: https://registry.npmjs.org
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Verify package
+        run: npm run prepublishOnly
+
+      - name: Build unique prerelease version
+        run: |
+          BASE_VERSION=$(node -p "require('./package.json').version.split('-')[0]")
+          NEXT_VERSION="${BASE_VERSION}-next.${GITHUB_RUN_ID}"
+          echo "Publishing prerelease version: ${NEXT_VERSION}"
+          npm version "${NEXT_VERSION}" --no-git-tag-version
+
+      - name: Publish to npm next tag
+        run: npm publish --tag next --access public --provenance
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}

@@ -119,6 +119,32 @@ git push origin main --follow-tags
 
 You can also run the workflow manually from the `Actions` tab using `workflow_dispatch`.
 
+## npm next-tag prerelease automation
+
+This repo also includes a GitHub Actions workflow that publishes prereleases to npm under the `next` dist-tag.
+
+Workflow file: `.github/workflows/release-npm-next.yml`
+
+Behavior:
+
+1. Triggers on every push to `main` (and manually with `workflow_dispatch`).
+2. Runs `prepublishOnly` checks.
+3. Creates a unique prerelease version from `package.json` version in CI (for example `0.2.0-next.<run_id>`).
+4. Publishes using `npm publish --tag next --access public --provenance`.
+
+Install prerelease channel:
+
+```bash
+npm install react-json-virtualization@next
+```
+
+Promote stable releases with tags as usual:
+
+```bash
+npm version patch
+git push origin main --follow-tags
+```
+
 ## API
 
 ### VirtualizeJSON.Collapsable props
