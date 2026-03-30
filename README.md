@@ -119,6 +119,8 @@ git push origin main --follow-tags
 
 You can also run the workflow manually from the `Actions` tab using `workflow_dispatch`.
 
+For a full repeatable release process, see `RELEASE_CHECKLIST.md`.
+
 ## npm next-tag prerelease automation
 
 This repo also includes a GitHub Actions workflow that publishes prereleases to npm under the `next` dist-tag.
