@@ -23,6 +23,21 @@ interface ViewerContentState {
   filteredItemCount: number;
 }
 
+const usesPrefixPathFiltering = (term: string, mode: PathFilterMode): boolean => {
+  if (mode === "prefix") {
+    return true;
+  }
+
+  return mode === "auto" && term.startsWith("$");
+};
+
+export const canUsePrefixPathSearchIndex = (
+  queryTerms: string[],
+  mode: PathFilterMode
+): boolean => {
+  return queryTerms.length === 1 && usesPrefixPathFiltering(queryTerms[0], mode);
+};
+
 export const useViewerContent = ({
   metadata,
   json,
@@ -40,20 +55,20 @@ export const useViewerContent = ({
   }, [activeExpandedPaths, metadata, root]);
 
   const normalizedFilterQuery = metadata ? (pathFilterQuery ?? "").trim() : "";
-  const resolvedFilterMode: Exclude<PathFilterMode, "auto"> =
-    pathFilterMode === "auto"
-      ? normalizedFilterQuery.startsWith("$")
-        ? "prefix"
-        : "includes"
-      : pathFilterMode;
+  const metadataQueryTerms = useMemo(
+    () => splitFilterQueryTerms(normalizedFilterQuery),
+    [normalizedFilterQuery]
+  );
+  const shouldBuildPathSearchIndex =
+    metadata && canUsePrefixPathSearchIndex(metadataQueryTerms, pathFilterMode);
 
   const pathSearchIndex = useMemo(() => {
-    if (!metadata || !normalizedFilterQuery || resolvedFilterMode !== "prefix") {
+    if (!shouldBuildPathSearchIndex) {
       return undefined;
     }
 
     return createPathSearchIndex(rows, { caseSensitive: pathFilterCaseSensitive });
-  }, [metadata, normalizedFilterQuery, pathFilterCaseSensitive, resolvedFilterMode, rows]);
+  }, [pathFilterCaseSensitive, rows, shouldBuildPathSearchIndex]);
 
   const filteredRows = useMemo(
     () =>
@@ -61,10 +76,10 @@ export const useViewerContent = ({
         ? []
         : filterRowsByPathQuery(rows, pathFilterQuery, {
             caseSensitive: pathFilterCaseSensitive,
-            mode: resolvedFilterMode,
+            mode: pathFilterMode,
             index: pathSearchIndex
           }),
-    [metadata, pathFilterCaseSensitive, pathFilterQuery, pathSearchIndex, resolvedFilterMode, rows]
+    [metadata, pathFilterCaseSensitive, pathFilterMode, pathFilterQuery, pathSearchIndex, rows]
   );
 
   const prettyLines = useMemo(() => {
