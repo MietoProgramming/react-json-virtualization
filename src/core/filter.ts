@@ -1,3 +1,4 @@
+import { splitFilterQueryTerms } from "./filterQuery";
 import type { FlatJsonRow } from "./types";
 
 export type PathFilterMode = "auto" | "includes" | "prefix";
@@ -65,11 +66,11 @@ const createTrieNode = (): PathSearchTrieNode => ({
   rowIndexes: []
 });
 
-const resolveMode = (query: string, mode: PathFilterMode | undefined): Exclude<PathFilterMode, "auto"> => {
+const resolveTermMode = (term: string, mode: PathFilterMode | undefined): Exclude<PathFilterMode, "auto"> => {
   if (mode === "includes" || mode === "prefix") {
     return mode;
   }
-  return query.startsWith("$") ? "prefix" : "includes";
+  return term.startsWith("$") ? "prefix" : "includes";
 };
 
 export function createPathSearchIndex(
@@ -126,18 +127,26 @@ export function filterRowsByPathQuery(
     return rows;
   }
 
+  const queryTerms = splitFilterQueryTerms(normalizedQuery);
+  if (queryTerms.length === 0) {
+    return rows;
+  }
+
   const caseSensitive = options.caseSensitive ?? false;
-  const needle = normalize(normalizedQuery, caseSensitive);
-  const mode = resolveMode(normalizedQuery, options.mode);
+  const needles = queryTerms.map((term) => normalize(term, caseSensitive));
+  const singleTermMode = resolveTermMode(queryTerms[0], options.mode);
 
   const matchedPaths = new Set<string>();
   if (
-    mode === "prefix" &&
+    singleTermMode === "prefix" &&
+    needles.length === 1 &&
     options.index &&
     options.index.rowCount === rows.length &&
     options.index.caseSensitive === caseSensitive
   ) {
-    options.index.matchPrefix(normalizedQuery).forEach((path) => {
+    const queryTerm = queryTerms[0];
+    const needle = needles[0];
+    options.index.matchPrefix(queryTerm).forEach((path) => {
       matchedPaths.add(path);
     });
 
@@ -154,17 +163,20 @@ export function filterRowsByPathQuery(
   } else {
     rows.forEach((row) => {
       const normalizedPath = normalize(row.path, caseSensitive);
-      const pathMatch =
-        mode === "prefix"
-          ? normalizedPath.startsWith(needle)
-          : normalizedPath.includes(needle);
-
       const value = toSearchableValue(row);
-      const valueMatch =
-        value !== null &&
-        normalize(value, caseSensitive).includes(needle);
+      const normalizedValue = value === null ? null : normalize(value, caseSensitive);
 
-      if (pathMatch || valueMatch) {
+      const matchesAnyTerm = needles.some((needle, index) => {
+        const termMode = resolveTermMode(queryTerms[index], options.mode);
+        const pathMatch =
+          termMode === "prefix"
+            ? normalizedPath.startsWith(needle)
+            : normalizedPath.includes(needle);
+        const valueMatch = normalizedValue !== null && normalizedValue.includes(needle);
+        return pathMatch || valueMatch;
+      });
+
+      if (matchesAnyTerm) {
         matchedPaths.add(row.path);
       }
     });

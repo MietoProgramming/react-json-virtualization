@@ -1,9 +1,9 @@
 import React, { useCallback, useMemo, useRef, useState } from "react";
 import {
-  VirtualizeJSON,
-  type FlatJsonRow,
-  type JsonThemeOverride,
-  type PathFilterMode
+    VirtualizeJSON,
+    type FlatJsonRow,
+    type JsonThemeOverride,
+    type PathFilterMode
 } from "react-json-virtualization";
 
 const sampleSources = [
@@ -18,6 +18,10 @@ const sampleSources = [
   {
     label: "Edge cases",
     path: `${import.meta.env.BASE_URL}samples/edge-cases.json`
+  },
+  {
+    label: "Large 2M rows (text with spaces)",
+    path: `${import.meta.env.BASE_URL}samples/large-2m-rows-with-spaces.json`
   }
 ] as const;
 
@@ -362,7 +366,7 @@ export function App(): React.ReactElement {
             Path/value filter query
             <input
               type="text"
-              placeholder="e.g. $.users[1], users, or test"
+              placeholder='e.g. zero hello, "new york" name, or $.users[1]'
               value={pathFilterQuery}
               onChange={(event) => setPathFilterQuery(event.target.value)}
             />

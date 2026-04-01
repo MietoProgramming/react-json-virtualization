@@ -1,10 +1,6 @@
 # react-json-virtualization
 
-Virtualized React JSON viewer optimized for large JSON strings with token-based color theming.
-
-## Status
-
-Early v1 implementation.
+Virtualized React JSON viewer for large JSON strings with token-based color theming.
 
 ## Features
 
@@ -22,6 +18,12 @@ Early v1 implementation.
 ```bash
 npm install react-json-virtualization
 ```
+
+## Demo
+
+Try the live demo:
+
+https://mietoprogramming.github.io/react-json-virtualization/
 
 ## Usage
 
@@ -62,91 +64,6 @@ export function StaticExample({ json }: { json: string }) {
 }
 ```
 
-## Local demo playground
-
-Run an interactive demo app from this repo to quickly test the viewer end-to-end.
-
-```bash
-npm install
-npm run demo
-```
-
-The demo includes:
-
-- Drag-and-drop JSON file upload
-- Local file picker for `.json` files
-- Repo sample loader (`demo/public/samples/*`)
-- Controls for height, row height, overscan, and initial expand depth
-- Path filter controls (query, mode, case sensitivity)
-- Theme preset switcher
-- Live parse progress and parse error display
-- Controlled selection and optional controlled expansion mode
-
-## GitHub Pages demo
-
-This repo includes a GitHub Actions workflow that publishes the demo to GitHub Pages from `main`.
-
-Workflow file: `.github/workflows/deploy-demo-pages.yml`
-
-After pushing this workflow, enable Pages in your repository settings:
-
-1. Open `Settings -> Pages`.
-2. Set `Build and deployment` source to `GitHub Actions`.
-3. Push to `main` (or run the workflow manually from the `Actions` tab).
-
-The demo will be available at:
-
-`https://<your-github-username>.github.io/react-json-virtualization/`
-
-## npm release automation
-
-This repo includes a GitHub Actions workflow that publishes the package to npm on version tags.
-
-Workflow file: `.github/workflows/release-npm.yml`
-
-Setup:
-
-1. Create an npm access token with publish permissions.
-2. Add it as a repository secret named `NPM_TOKEN`.
-3. Push a version tag like `v0.1.1` to trigger publish.
-
-Example:
-
-```bash
-npm version patch
-git push origin main --follow-tags
-```
-
-You can also run the workflow manually from the `Actions` tab using `workflow_dispatch`.
-
-For a full repeatable release process, see `RELEASE_CHECKLIST.md`.
-
-## npm next-tag prerelease automation
-
-This repo also includes a GitHub Actions workflow that publishes prereleases to npm under the `next` dist-tag.
-
-Workflow file: `.github/workflows/release-npm-next.yml`
-
-Behavior:
-
-1. Triggers on every push to `main` (and manually with `workflow_dispatch`).
-2. Runs `prepublishOnly` checks.
-3. Creates a unique prerelease version from `package.json` version in CI (for example `0.2.0-next.<run_id>`).
-4. Publishes using `npm publish --tag next --access public --provenance`.
-
-Install prerelease channel:
-
-```bash
-npm install react-json-virtualization@next
-```
-
-Promote stable releases with tags as usual:
-
-```bash
-npm version patch
-git push origin main --follow-tags
-```
-
 ## API
 
 ### VirtualizeJSON.Collapsable props
@@ -161,7 +78,7 @@ git push origin main --follow-tags
 - `expandedPaths?: ReadonlySet<string>` Controlled expanded path set.
 - `defaultExpandedPaths?: Iterable<string>` Initial expanded paths in uncontrolled mode.
 - `onExpandedPathsChange?: (paths) => void` Expansion state callback.
-- `pathFilterQuery?: string` Filters by JSON path and all JSON value types (`string`, `number`, `boolean`, `null`, `object`, `array`). In `metadata=false`, it filters pretty-printed lines.
+- `pathFilterQuery?: string` Filters by JSON path and all JSON value types (`string`, `number`, `boolean`, `null`, `object`, `array`). Use multiple terms separated by spaces to match any term, and wrap phrases in quotes (for example `"new york" name`). In `metadata=false`, it filters pretty-printed lines.
 - `pathFilterCaseSensitive?: boolean` Case-sensitive path filter mode.
 - `pathFilterMode?: "auto" | "prefix" | "includes"` Filter strategy. Defaults to `auto`.
 - `theme?: JsonThemeOverride` Per-token color overrides.
@@ -201,17 +118,3 @@ All `VirtualizeJSON.Collapsable` props except expansion control props:
 - `createPathSearchIndex(rows, { caseSensitive? })`
 
 For best path-filter performance on very large expanded row sets, use `mode: "prefix"` with a cached index from `createPathSearchIndex`.
-
-## Development
-
-```bash
-npm install
-npm run typecheck
-npm run test
-npm run build
-npm run demo
-npm run bench:generate
-npm run bench:parse
-```
-
-Generated benchmark fixtures are written to `bench/fixtures/generated/` for 10MB, 50MB, and 100MB payloads.

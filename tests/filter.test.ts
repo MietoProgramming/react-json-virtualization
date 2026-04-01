@@ -23,6 +23,50 @@ describe("filterRowsByPathQuery", () => {
     expect(filtered.map((row) => row.path)).toEqual(["$", "$.API", "$.API.token"]);
   });
 
+  it("supports multi-term filtering across separate branches", () => {
+    const data = {
+      numbers: {
+        zero: 0,
+        one: 1
+      },
+      strings: {
+        simple: "hello",
+        other: "x"
+      }
+    };
+    const rows = flattenJson(data, new Set(["$", "$.numbers", "$.strings"]));
+
+    const filtered = filterRowsByPathQuery(rows, "zero hello");
+
+    expect(filtered.map((row) => row.path)).toEqual([
+      "$",
+      "$.numbers",
+      "$.numbers.zero",
+      "$.strings",
+      "$.strings.simple"
+    ]);
+  });
+
+  it("supports single quoted phrase filtering", () => {
+    const data = {
+      sports: {
+        soccer: {
+          name: "new york"
+        }
+      }
+    };
+    const rows = flattenJson(data, new Set(["$", "$.sports", "$.sports.soccer"]));
+
+    const filtered = filterRowsByPathQuery(rows, '"new york"');
+
+    expect(filtered.map((row) => row.path)).toEqual([
+      "$",
+      "$.sports",
+      "$.sports.soccer",
+      "$.sports.soccer.name"
+    ]);
+  });
+
   it("uses prefix mode for JSON-path style queries in auto mode", () => {
     const data = { users: [{ name: "Ada" }], profile: { city: "Gdansk" } };
     const rows = flattenJson(data, new Set(["$", "$.users", "$.users[0]", "$.profile"]));
