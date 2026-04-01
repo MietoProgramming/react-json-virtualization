@@ -1,5 +1,6 @@
 import { useMemo } from "react";
 import { createPathSearchIndex, filterRowsByPathQuery, type PathFilterMode } from "../../core/filter";
+import { splitFilterQueryTerms } from "../../core/filterQuery";
 import { flattenJson } from "../../core/flatten";
 import type { FlatJsonRow, JSONValue } from "../../core/types";
 import { normalizeSearchInput } from "./prettyTokens";
@@ -92,11 +93,16 @@ export const useViewerContent = ({
       return prettyLines.map((_line, index) => index);
     }
 
-    const needle = normalizeSearchInput(query, pathFilterCaseSensitive);
+    const terms = splitFilterQueryTerms(query);
+    if (terms.length === 0) {
+      return prettyLines.map((_line, index) => index);
+    }
+
+    const needles = terms.map((term) => normalizeSearchInput(term, pathFilterCaseSensitive));
     const indexes: number[] = [];
     for (let index = 0; index < prettyLines.length; index += 1) {
       const line = normalizeSearchInput(prettyLines[index], pathFilterCaseSensitive);
-      if (line.includes(needle)) {
+      if (needles.some((needle) => line.includes(needle))) {
         indexes.push(index);
       }
     }

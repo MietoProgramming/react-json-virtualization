@@ -161,7 +161,7 @@ git push origin main --follow-tags
 - `expandedPaths?: ReadonlySet<string>` Controlled expanded path set.
 - `defaultExpandedPaths?: Iterable<string>` Initial expanded paths in uncontrolled mode.
 - `onExpandedPathsChange?: (paths) => void` Expansion state callback.
-- `pathFilterQuery?: string` Filters by JSON path and all JSON value types (`string`, `number`, `boolean`, `null`, `object`, `array`). In `metadata=false`, it filters pretty-printed lines.
+- `pathFilterQuery?: string` Filters by JSON path and all JSON value types (`string`, `number`, `boolean`, `null`, `object`, `array`). Use multiple terms separated by spaces to match any term, and wrap phrases in quotes (for example `"new york" name`). In `metadata=false`, it filters pretty-printed lines.
 - `pathFilterCaseSensitive?: boolean` Case-sensitive path filter mode.
 - `pathFilterMode?: "auto" | "prefix" | "includes"` Filter strategy. Defaults to `auto`.
 - `theme?: JsonThemeOverride` Per-token color overrides.
