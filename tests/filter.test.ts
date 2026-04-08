@@ -67,6 +67,33 @@ describe("filterRowsByPathQuery", () => {
     ]);
   });
 
+  it("treats quoted single terms the same as unquoted terms", () => {
+    const data = {
+      users: [{ name: "Ada" }],
+      profile: { city: "Gdansk" }
+    };
+    const rows = flattenJson(data, new Set(["$", "$.users", "$.users[0]", "$.profile"]));
+
+    const quoted = filterRowsByPathQuery(rows, '"Ada"');
+    const unquoted = filterRowsByPathQuery(rows, "Ada");
+
+    expect(quoted.map((row) => row.path)).toEqual(unquoted.map((row) => row.path));
+  });
+
+  it("supports quoted JSON-path terms in auto mode", () => {
+    const data = { users: [{ name: "Ada" }], profile: { city: "Gdansk" } };
+    const rows = flattenJson(data, new Set(["$", "$.users", "$.users[0]", "$.profile"]));
+
+    const filtered = filterRowsByPathQuery(rows, '"$.users"', { mode: "auto" });
+
+    expect(filtered.map((row) => row.path)).toEqual([
+      "$",
+      "$.users",
+      "$.users[0]",
+      "$.users[0].name"
+    ]);
+  });
+
   it("uses prefix mode for JSON-path style queries in auto mode", () => {
     const data = { users: [{ name: "Ada" }], profile: { city: "Gdansk" } };
     const rows = flattenJson(data, new Set(["$", "$.users", "$.users[0]", "$.profile"]));
@@ -136,6 +163,6 @@ describe("filterRowsByPathQuery", () => {
     const arrayFiltered = filterRowsByPathQuery(rows, '"two"');
 
     expect(objectFiltered.map((row) => row.path)).toEqual(["$", "$.details"]);
-    expect(arrayFiltered.map((row) => row.path)).toEqual(["$", "$.tags"]);
+    expect(arrayFiltered.map((row) => row.path)).toEqual(["$", "$.tags", "$.tags[1]"]);
   });
 });

@@ -62,4 +62,45 @@ describe("useViewerContent", () => {
       "$.profile.city"
     ]);
   });
+
+  it("filters pretty lines using OR semantics across terms", () => {
+    const json = `{
+  "zero": 0,
+  "greet": "hello",
+  "other": "x"
+}`;
+
+    const result = runUseViewerContent({
+      metadata: false,
+      json,
+      root: null,
+      activeExpandedPaths: new Set<string>(),
+      pathFilterQuery: "zero hello",
+      pathFilterCaseSensitive: false,
+      pathFilterMode: "auto"
+    });
+
+    expect(result.filteredPrettyLineIndexes).toEqual([1, 2]);
+    expect(result.filteredItemCount).toBe(2);
+  });
+
+  it("supports quoted phrase filtering in pretty line mode", () => {
+    const json = `{
+  "city": "new york",
+  "other": "x"
+}`;
+
+    const result = runUseViewerContent({
+      metadata: false,
+      json,
+      root: null,
+      activeExpandedPaths: new Set<string>(),
+      pathFilterQuery: '"new york"',
+      pathFilterCaseSensitive: false,
+      pathFilterMode: "auto"
+    });
+
+    expect(result.filteredPrettyLineIndexes).toEqual([1]);
+    expect(result.filteredItemCount).toBe(1);
+  });
 });

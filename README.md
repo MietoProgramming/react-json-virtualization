@@ -78,7 +78,7 @@ export function StaticExample({ json }: { json: string }) {
 - `expandedPaths?: ReadonlySet<string>` Controlled expanded path set.
 - `defaultExpandedPaths?: Iterable<string>` Initial expanded paths in uncontrolled mode.
 - `onExpandedPathsChange?: (paths) => void` Expansion state callback.
-- `pathFilterQuery?: string` Filters by JSON path and all JSON value types (`string`, `number`, `boolean`, `null`, `object`, `array`). Use multiple terms separated by spaces to match any term, and wrap phrases in quotes (for example `"new york" name`). In `metadata=false`, it filters pretty-printed lines.
+- `pathFilterQuery?: string` Filters by JSON path and all JSON value types (`string`, `number`, `boolean`, `null`, `object`, `array`). Unquoted terms are split by whitespace and matched with OR semantics (`zero hello` matches either term). Wrap exact phrases in quotes (for example `"new york" name`). Quoted single terms are treated the same as unquoted terms. In `metadata=false`, it filters pretty-printed lines.
 - `pathFilterCaseSensitive?: boolean` Case-sensitive path filter mode.
 - `pathFilterMode?: "auto" | "prefix" | "includes"` Filter strategy. Defaults to `auto`.
 - `theme?: JsonThemeOverride` Per-token color overrides.
@@ -103,6 +103,7 @@ All `VirtualizeJSON.Collapsable` props except expansion control props:
 
 - `JSONViewer` was renamed to `VirtualizeJSON.Collapsable`.
 - Static always-expanded mode is available as `VirtualizeJSON.Static`.
+- `pathFilterQuery` now treats unquoted whitespace as multiple OR terms. Use quotes to keep multi-word phrases together.
 
 ### Expansion helper exports
 

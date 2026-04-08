@@ -1,5 +1,19 @@
+const hasUnescapedInnerQuote = (value: string): boolean => {
+  for (let index = 1; index < value.length - 1; index += 1) {
+    if (value[index] === '"' && value[index - 1] !== "\\") {
+      return true;
+    }
+  }
+  return false;
+};
+
 const trimOuterQuotes = (value: string): string => {
-  if (value.length >= 2 && value.startsWith('"') && value.endsWith('"')) {
+  if (
+    value.length >= 2 &&
+    value.startsWith('"') &&
+    value.endsWith('"') &&
+    !hasUnescapedInnerQuote(value)
+  ) {
     return value.slice(1, -1);
   }
   return value;
@@ -40,19 +54,7 @@ const tokenizeByWhitespace = (query: string): string[] => {
 };
 
 export const splitFilterQueryTerms = (query: string): string[] => {
-  const tokens = tokenizeByWhitespace(query);
-
-  if (tokens.length <= 1) {
-    return tokens
-      .map((token) => token.trim())
-      .filter((token) => token.length > 0)
-      .map((token) => {
-        const unquoted = trimOuterQuotes(token);
-        return unquoted.includes(" ") ? unquoted : token;
-      });
-  }
-
-  return tokens
+  return tokenizeByWhitespace(query)
     .map((token) => trimOuterQuotes(token.trim()))
     .filter((token) => token.length > 0);
 };
