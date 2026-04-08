@@ -1,5 +1,6 @@
 import { useMemo } from "react";
 import { createPathSearchIndex, filterRowsByPathQuery, type PathFilterMode } from "../../core/filter";
+import { splitFilterQueryTerms } from "../../core/filterQuery";
 import { flattenJson } from "../../core/flatten";
 import type { FlatJsonRow, JSONValue } from "../../core/types";
 import { normalizeSearchInput } from "./prettyTokens";
@@ -22,6 +23,21 @@ interface ViewerContentState {
   filteredItemCount: number;
 }
 
+const usesPrefixPathFiltering = (term: string, mode: PathFilterMode): boolean => {
+  if (mode === "prefix") {
+    return true;
+  }
+
+  return mode === "auto" && term.startsWith("$");
+};
+
+export const canUsePrefixPathSearchIndex = (
+  queryTerms: string[],
+  mode: PathFilterMode
+): boolean => {
+  return queryTerms.length === 1 && usesPrefixPathFiltering(queryTerms[0], mode);
+};
+
 export const useViewerContent = ({
   metadata,
   json,
@@ -39,20 +55,20 @@ export const useViewerContent = ({
   }, [activeExpandedPaths, metadata, root]);
 
   const normalizedFilterQuery = metadata ? (pathFilterQuery ?? "").trim() : "";
-  const resolvedFilterMode: Exclude<PathFilterMode, "auto"> =
-    pathFilterMode === "auto"
-      ? normalizedFilterQuery.startsWith("$")
-        ? "prefix"
-        : "includes"
-      : pathFilterMode;
+  const metadataQueryTerms = useMemo(
+    () => splitFilterQueryTerms(normalizedFilterQuery),
+    [normalizedFilterQuery]
+  );
+  const shouldBuildPathSearchIndex =
+    metadata && canUsePrefixPathSearchIndex(metadataQueryTerms, pathFilterMode);
 
   const pathSearchIndex = useMemo(() => {
-    if (!metadata || !normalizedFilterQuery || resolvedFilterMode !== "prefix") {
+    if (!shouldBuildPathSearchIndex) {
       return undefined;
     }
 
     return createPathSearchIndex(rows, { caseSensitive: pathFilterCaseSensitive });
-  }, [metadata, normalizedFilterQuery, pathFilterCaseSensitive, resolvedFilterMode, rows]);
+  }, [pathFilterCaseSensitive, rows, shouldBuildPathSearchIndex]);
 
   const filteredRows = useMemo(
     () =>
@@ -60,10 +76,10 @@ export const useViewerContent = ({
         ? []
         : filterRowsByPathQuery(rows, pathFilterQuery, {
             caseSensitive: pathFilterCaseSensitive,
-            mode: resolvedFilterMode,
+            mode: pathFilterMode,
             index: pathSearchIndex
           }),
-    [metadata, pathFilterCaseSensitive, pathFilterQuery, pathSearchIndex, resolvedFilterMode, rows]
+    [metadata, pathFilterCaseSensitive, pathFilterMode, pathFilterQuery, pathSearchIndex, rows]
   );
 
   const prettyLines = useMemo(() => {
@@ -92,11 +108,16 @@ export const useViewerContent = ({
       return prettyLines.map((_line, index) => index);
     }
 
-    const needle = normalizeSearchInput(query, pathFilterCaseSensitive);
+    const terms = splitFilterQueryTerms(query);
+    if (terms.length === 0) {
+      return prettyLines.map((_line, index) => index);
+    }
+
+    const needles = terms.map((term) => normalizeSearchInput(term, pathFilterCaseSensitive));
     const indexes: number[] = [];
     for (let index = 0; index < prettyLines.length; index += 1) {
       const line = normalizeSearchInput(prettyLines[index], pathFilterCaseSensitive);
-      if (line.includes(needle)) {
+      if (needles.some((needle) => line.includes(needle))) {
         indexes.push(index);
       }
     }
