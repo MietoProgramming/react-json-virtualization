@@ -1,10 +1,11 @@
 import React, { useCallback, useMemo, useRef, useState } from "react";
 import {
-    VirtualizeJSON,
-    type FlatJsonRow,
-    type JsonThemeOverride,
-    type PathFilterMode
+  VirtualizeJSON,
+  type FlatJsonRow,
+  type JsonThemeOverride,
+  type PathFilterMode
 } from "react-json-virtualization";
+import { VirtualizeJSONModeDoc } from "./VirtualizeJSONModeDoc";
 
 const sampleSources = [
   {
@@ -178,6 +179,8 @@ export function App(): React.ReactElement {
           theming, and virtualization behavior in one place.
         </p>
       </header>
+
+      <VirtualizeJSONModeDoc />
 
       <section className="panel controls-panel">
         <h2>Data Source</h2>

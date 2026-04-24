@@ -1,9 +1,16 @@
 import { useMemo } from "react";
-import { createPathSearchIndex, filterRowsByPathQuery, type PathFilterMode } from "../../core/filter";
+import { createPathSearchIndex, type PathFilterMode } from "../../core/filter";
 import { splitFilterQueryTerms } from "../../core/filterQuery";
 import { flattenJson } from "../../core/flatten";
-import type { FlatJsonRow, JSONValue } from "../../core/types";
-import { normalizeSearchInput } from "./prettyTokens";
+import { normalizeQuery, searchPrettyLinesByQueries, searchRowsByQueries } from "../../core/search";
+import type { FlatJsonRow, JSONValue, JSONViewerSearchMetadata } from "../../core/types";
+import { toPrettyLines } from "./prettyLines";
+import {
+    buildQueryParts,
+    buildSearchMetadata,
+    EMPTY_MATCHED_PATHS,
+    EMPTY_MATCHED_PRETTY_LINE_INDEXES
+} from "./searchMetadata";
 
 interface UseViewerContentParams {
   metadata: boolean;
@@ -11,8 +18,10 @@ interface UseViewerContentParams {
   root: JSONValue | null;
   activeExpandedPaths: ReadonlySet<string>;
   pathFilterQuery?: string;
+  searchQuery?: string;
   pathFilterCaseSensitive: boolean;
   pathFilterMode: PathFilterMode;
+  searchMetadataLimit?: number;
 }
 
 interface ViewerContentState {
@@ -21,6 +30,9 @@ interface ViewerContentState {
   prettyLines: string[];
   filteredPrettyLineIndexes: number[];
   filteredItemCount: number;
+  matchedPathSet: ReadonlySet<string>;
+  matchedPrettyLineIndexSet: ReadonlySet<number>;
+  searchMetadata: JSONViewerSearchMetadata;
 }
 
 const usesPrefixPathFiltering = (term: string, mode: PathFilterMode): boolean => {
@@ -44,8 +56,10 @@ export const useViewerContent = ({
   root,
   activeExpandedPaths,
   pathFilterQuery,
+  searchQuery,
   pathFilterCaseSensitive,
-  pathFilterMode
+  pathFilterMode,
+  searchMetadataLimit
 }: UseViewerContentParams): ViewerContentState => {
   const rows = useMemo(() => {
     if (!metadata || root === null) {
@@ -54,13 +68,17 @@ export const useViewerContent = ({
     return flattenJson(root, activeExpandedPaths, { metadata });
   }, [activeExpandedPaths, metadata, root]);
 
-  const normalizedFilterQuery = metadata ? (pathFilterQuery ?? "").trim() : "";
-  const metadataQueryTerms = useMemo(
-    () => splitFilterQueryTerms(normalizedFilterQuery),
-    [normalizedFilterQuery]
+  const normalizedPathFilterQuery = normalizeQuery(pathFilterQuery);
+  const normalizedSearchQuery = normalizeQuery(searchQuery);
+  const queryParts = useMemo(
+    () => buildQueryParts(normalizedPathFilterQuery, normalizedSearchQuery),
+    [normalizedPathFilterQuery, normalizedSearchQuery]
   );
-  const shouldBuildPathSearchIndex =
-    metadata && canUsePrefixPathSearchIndex(metadataQueryTerms, pathFilterMode);
+  const shouldBuildPathSearchIndex = useMemo(() => {
+    return metadata && queryParts.some((query) => {
+      return canUsePrefixPathSearchIndex(splitFilterQueryTerms(query), pathFilterMode);
+    });
+  }, [metadata, pathFilterMode, queryParts]);
 
   const pathSearchIndex = useMemo(() => {
     if (!shouldBuildPathSearchIndex) {
@@ -70,60 +88,47 @@ export const useViewerContent = ({
     return createPathSearchIndex(rows, { caseSensitive: pathFilterCaseSensitive });
   }, [pathFilterCaseSensitive, rows, shouldBuildPathSearchIndex]);
 
-  const filteredRows = useMemo(
-    () =>
-      !metadata
-        ? []
-        : filterRowsByPathQuery(rows, pathFilterQuery, {
-            caseSensitive: pathFilterCaseSensitive,
-            mode: pathFilterMode,
-            index: pathSearchIndex
-          }),
-    [metadata, pathFilterCaseSensitive, pathFilterMode, pathFilterQuery, pathSearchIndex, rows]
-  );
+  const treeSearchResult = useMemo(() => {
+    if (!metadata) {
+      return undefined;
+    }
+
+    return searchRowsByQueries(rows, queryParts, {
+      caseSensitive: pathFilterCaseSensitive,
+      mode: pathFilterMode,
+      index: pathSearchIndex
+    });
+  }, [metadata, pathFilterCaseSensitive, pathFilterMode, pathSearchIndex, queryParts, rows]);
+  const filteredRows = metadata ? (treeSearchResult?.filteredRows ?? []) : [];
+  const matchedPathSet = metadata
+    ? (treeSearchResult?.directMatchPathSet ?? EMPTY_MATCHED_PATHS)
+    : EMPTY_MATCHED_PATHS;
 
   const prettyLines = useMemo(() => {
     if (metadata) {
       return [] as string[];
     }
 
-    if (json.includes("\n") || json.includes("\r")) {
-      return json.split(/\r?\n/);
-    }
-
-    try {
-      return JSON.stringify(JSON.parse(json), null, 2).split(/\r?\n/);
-    } catch {
-      return json.split(/\r?\n/);
-    }
+    return toPrettyLines(json);
   }, [json, metadata]);
 
-  const filteredPrettyLineIndexes = useMemo(() => {
+  const plainSearchResult = useMemo(() => {
     if (metadata) {
-      return [] as number[];
+      return undefined;
     }
 
-    const query = (pathFilterQuery ?? "").trim();
-    if (!query) {
-      return prettyLines.map((_line, index) => index);
+    return searchPrettyLinesByQueries(prettyLines, queryParts, pathFilterCaseSensitive);
+  }, [metadata, pathFilterCaseSensitive, prettyLines, queryParts]);
+  const filteredPrettyLineIndexes = metadata
+    ? []
+    : (plainSearchResult?.filteredLineIndexes ?? []);
+  const matchedPrettyLineIndexSet = useMemo(() => {
+    if (metadata || !plainSearchResult || plainSearchResult.matchedLineIndexes.length === 0) {
+      return EMPTY_MATCHED_PRETTY_LINE_INDEXES;
     }
 
-    const terms = splitFilterQueryTerms(query);
-    if (terms.length === 0) {
-      return prettyLines.map((_line, index) => index);
-    }
-
-    const needles = terms.map((term) => normalizeSearchInput(term, pathFilterCaseSensitive));
-    const indexes: number[] = [];
-    for (let index = 0; index < prettyLines.length; index += 1) {
-      const line = normalizeSearchInput(prettyLines[index], pathFilterCaseSensitive);
-      if (needles.some((needle) => line.includes(needle))) {
-        indexes.push(index);
-      }
-    }
-
-    return indexes;
-  }, [metadata, pathFilterCaseSensitive, pathFilterQuery, prettyLines]);
+    return new Set<number>(plainSearchResult.matchedLineIndexes);
+  }, [metadata, plainSearchResult]);
 
   const rowsByPath = useMemo(() => {
     const index = new Map<string, FlatJsonRow>();
@@ -133,11 +138,32 @@ export const useViewerContent = ({
     return index;
   }, [rows]);
 
+  const searchMetadata = useMemo<JSONViewerSearchMetadata>(() => {
+    return buildSearchMetadata({
+      metadata,
+      pathFilterQuery: normalizedPathFilterQuery,
+      searchQuery: normalizedSearchQuery,
+      searchMetadataLimit,
+      treeSearchResult,
+      plainSearchResult
+    });
+  }, [
+    metadata,
+    normalizedPathFilterQuery,
+    normalizedSearchQuery,
+    plainSearchResult,
+    searchMetadataLimit,
+    treeSearchResult
+  ]);
+
   return {
     filteredRows,
     rowsByPath,
     prettyLines,
     filteredPrettyLineIndexes,
-    filteredItemCount: metadata ? filteredRows.length : filteredPrettyLineIndexes.length
+    filteredItemCount: metadata ? filteredRows.length : filteredPrettyLineIndexes.length,
+    matchedPathSet,
+    matchedPrettyLineIndexSet,
+    searchMetadata
   };
 };

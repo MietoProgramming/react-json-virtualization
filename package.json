@@ -45,6 +45,7 @@
         "demo:preview": "vite preview --config demo/vite.config.ts",
         "bench:generate": "node bench/generate-fixtures.mjs",
         "bench:parse": "npm run build && node bench/run-parse-benchmark.mjs",
+        "bench:modes": "npm run build && node bench/run-mode-benchmark.mjs",
         "typecheck": "tsc --noEmit",
         "test": "vitest run"
     },

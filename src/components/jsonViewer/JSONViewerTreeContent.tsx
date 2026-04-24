@@ -6,6 +6,7 @@ interface JSONViewerTreeContentProps {
   topSpacerHeight: number;
   bottomSpacerHeight: number;
   visibleRows: FlatJsonRow[];
+  matchedPaths: ReadonlySet<string>;
   activeSelectedPath: string;
   alwaysExpanded: boolean;
   onToggle: (path: string) => void;
@@ -16,6 +17,7 @@ export function JSONViewerTreeContent({
   topSpacerHeight,
   bottomSpacerHeight,
   visibleRows,
+  matchedPaths,
   activeSelectedPath,
   alwaysExpanded,
   onToggle,
@@ -29,6 +31,7 @@ export function JSONViewerTreeContent({
           key={row.id}
           row={row}
           isSelected={activeSelectedPath === row.path}
+          isSearchMatch={matchedPaths.has(row.path)}
           onToggle={onToggle}
           onSelect={onSelect}
           canToggle={!alwaysExpanded}
