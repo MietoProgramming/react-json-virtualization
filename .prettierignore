@@ -1,0 +1,5 @@
+dist
+demo/dist
+node_modules
+bench/fixtures/generated
+demo/public/samples/large-2m-rows-with-spaces.json
