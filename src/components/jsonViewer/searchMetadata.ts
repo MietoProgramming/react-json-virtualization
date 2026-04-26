@@ -8,21 +8,14 @@ interface BuildSearchMetadataParams {
   searchMetadataLimit?: number;
   treeSearchResult?: TreeSearchResult;
   plainSearchResult?: PrettyLineSearchResult;
+  visibleCount: number;
 }
 
 export const EMPTY_MATCHED_PATHS: ReadonlySet<string> = new Set<string>();
 export const EMPTY_MATCHED_PRETTY_LINE_INDEXES: ReadonlySet<number> = new Set<number>();
 
-export const buildQueryParts = (pathFilterQuery: string, searchQuery: string): string[] => {
-  return [pathFilterQuery, searchQuery].filter((query) => query.length > 0);
-};
-
-const buildEffectiveSearchQuery = (pathFilterQuery: string, searchQuery: string): string => {
-  if (pathFilterQuery && searchQuery) {
-    return `${pathFilterQuery} && ${searchQuery}`;
-  }
-
-  return pathFilterQuery || searchQuery;
+export const buildQueryParts = (query: string): string[] => {
+  return query.length > 0 ? [query] : [];
 };
 
 const resolveMetadataLimit = (limit: number | undefined): number => {
@@ -46,9 +39,10 @@ export const buildSearchMetadata = ({
   searchQuery,
   searchMetadataLimit,
   treeSearchResult,
-  plainSearchResult
+  plainSearchResult,
+  visibleCount
 }: BuildSearchMetadataParams): JSONViewerSearchMetadata => {
-  const effectiveQuery = buildEffectiveSearchQuery(pathFilterQuery, searchQuery);
+  const effectiveQuery = searchQuery;
   const mode = metadata ? "tree" : "plain";
 
   if (!effectiveQuery) {
@@ -58,7 +52,7 @@ export const buildSearchMetadata = ({
       pathFilterQuery,
       searchQuery,
       matchCount: 0,
-      visibleCount: 0,
+      visibleCount,
       matchedPaths: [],
       matchedRowIds: [],
       matchedLineNumbers: [],
@@ -79,7 +73,7 @@ export const buildSearchMetadata = ({
       pathFilterQuery,
       searchQuery,
       matchCount: directMatchPaths.length,
-      visibleCount: treeSearchResult?.filteredRows.length ?? 0,
+      visibleCount,
       matchedPaths: cappedPaths.items,
       matchedRowIds: cappedRowIds.items,
       matchedLineNumbers: [],
@@ -98,7 +92,7 @@ export const buildSearchMetadata = ({
     pathFilterQuery,
     searchQuery,
     matchCount: matchedLineNumbers.length,
-    visibleCount: plainSearchResult?.filteredLineIndexes.length ?? 0,
+    visibleCount,
     matchedPaths: [],
     matchedRowIds: cappedLines.items.map((lineNumber) => `line:${lineNumber}`),
     matchedLineNumbers: cappedLines.items,

@@ -41,31 +41,33 @@ npm run bench:modes
 
 Environment: Node `v24.14.1`, linux x64, fixtures from `bench/fixtures/generated`, 5 iterations.
 
+Scope: `Collapsable` and `Static` include parse + expansion + flatten work. `Plain (metadata=false)` measures pretty-line generation only.
+
 ### large-10mb.json (10.00 MB)
 
 | Mode | Avg (ms) | Min (ms) | Max (ms) | Output size | vs Collapsable |
 | --- | ---: | ---: | ---: | ---: | ---: |
-| `Collapsable (metadata=true, depth=1)` | 9.75 | 7.62 | 11.83 | 64,838 rows | 1.00x |
-| `Static (metadata=true, alwaysExpanded)` | 370.45 | 309.81 | 404.46 | 842,834 rows | 38.00x |
-| `Plain (metadata=false)` | 146.68 | 141.29 | 158.97 | 1,037,335 lines | 15.05x |
+| `Collapsable (metadata=true, depth=1)` | 1024.77 | 1017.08 | 1042.66 | 64,838 rows | 1.00x |
+| `Static (metadata=true, alwaysExpanded)` | 1384.20 | 1308.87 | 1468.24 | 842,834 rows | 1.35x |
+| `Plain (metadata=false)` | 136.72 | 127.33 | 143.63 | 1,037,335 lines | 0.13x |
 
 ### large-50mb.json (50.00 MB)
 
 | Mode | Avg (ms) | Min (ms) | Max (ms) | Output size | vs Collapsable |
 | --- | ---: | ---: | ---: | ---: | ---: |
-| `Collapsable (metadata=true, depth=1)` | 87.85 | 68.78 | 130.65 | 324,181 rows | 1.00x |
-| `Static (metadata=true, alwaysExpanded)` | 2192.44 | 1937.74 | 2477.58 | 4,214,293 rows | 24.96x |
-| `Plain (metadata=false)` | 850.72 | 817.88 | 902.08 | 5,186,823 lines | 9.68x |
+| `Collapsable (metadata=true, depth=1)` | 5230.99 | 4973.87 | 5534.76 | 324,181 rows | 1.00x |
+| `Static (metadata=true, alwaysExpanded)` | 7630.65 | 7380.08 | 8191.26 | 4,214,293 rows | 1.46x |
+| `Plain (metadata=false)` | 911.44 | 839.57 | 1030.96 | 5,186,823 lines | 0.17x |
 
 ### large-100mb.json (100.00 MB)
 
 | Mode | Avg (ms) | Min (ms) | Max (ms) | Output size | vs Collapsable |
 | --- | ---: | ---: | ---: | ---: | ---: |
-| `Collapsable (metadata=true, depth=1)` | 191.35 | 160.53 | 307.84 | 648,359 rows | 1.00x |
-| `Static (metadata=true, alwaysExpanded)` | 4463.40 | 4364.28 | 4574.43 | 8,428,607 rows | 23.33x |
-| `Plain (metadata=false)` | 1856.35 | 1774.53 | 1963.01 | 10,373,671 lines | 9.70x |
+| `Collapsable (metadata=true, depth=1)` | 10771.17 | 10303.29 | 11218.33 | 648,359 rows | 1.00x |
+| `Static (metadata=true, alwaysExpanded)` | 16062.59 | 15595.29 | 16422.84 | 8,428,607 rows | 1.49x |
+| `Plain (metadata=false)` | 1776.98 | 1639.63 | 1935.16 | 10,373,671 lines | 0.16x |
 
-`Static` is slower because it flattens a much larger always-expanded tree.
+`Plain` is fastest in this end-to-end benchmark because metadata=false bypasses incremental tree parsing and flattening.
 
 ## Usage
 
@@ -121,7 +123,7 @@ export function StaticExample({ json }: { json: string }) {
 - `defaultExpandedPaths?: Iterable<string>` Initial expanded paths in uncontrolled mode.
 - `onExpandedPathsChange?: (paths) => void` Expansion state callback.
 - `pathFilterQuery?: string` Filters by JSON path and all JSON value types (`string`, `number`, `boolean`, `null`, `object`, `array`). Unquoted terms are split by whitespace and matched with OR semantics (`zero hello` matches either term). Wrap exact phrases in quotes (for example `"new york" name`). Quoted single terms are treated the same as unquoted terms. In `metadata=false`, it filters pretty-printed lines.
-- `searchQuery?: string` Additional search query combined with `pathFilterQuery` using AND semantics. Uses the same tokenization and term matching rules.
+- `searchQuery?: string` Highlights matches without filtering rows or lines. Uses the same tokenization and term matching rules as `pathFilterQuery`.
 - `pathFilterCaseSensitive?: boolean` Case-sensitive path filter mode.
 - `pathFilterMode?: "auto" | "prefix" | "includes"` Filter strategy. Defaults to `auto`.
 - `searchMetadataLimit?: number` Maximum identifiers returned in search metadata arrays. Default `500`.
@@ -129,7 +131,7 @@ export function StaticExample({ json }: { json: string }) {
 - `selectedPath?: string` Controlled selected node path.
 - `className?: string` Optional custom class.
 - `onNodeClick?: (path, row) => void` Node selection callback.
-- `onSearchMetadata?: (metadata) => void` Search callback with counts and capped match identifiers for both `metadata=true` (tree rows) and `metadata=false` (pretty lines).
+- `onSearchMetadata?: (metadata) => void` Search callback with counts and capped match identifiers for both `metadata=true` (tree rows) and `metadata=false` (pretty lines). Does not filter the view.
 - `onParseProgress?: (processed, total) => void` Parse progress callback.
 - `onParseError?: (error) => void` Parse error callback.
 

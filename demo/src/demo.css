@@ -152,6 +152,32 @@ button:disabled {
     overflow: hidden;
 }
 
+.rjv-container.demo-search-highlight-left-rail .rjv-row-match,
+.rjv-container.demo-search-highlight-left-rail .rjv-plain-line-match {
+    background: #fff4d6;
+    box-shadow: inset 4px 0 0 #bf6a00;
+}
+
+.rjv-container.demo-search-highlight-outline .rjv-row-match,
+.rjv-container.demo-search-highlight-outline .rjv-plain-line-match {
+    background: #eaf4ff;
+    outline: 1px dashed #2f6599;
+    outline-offset: -1px;
+}
+
+.rjv-container.demo-search-highlight-underline .rjv-row-match,
+.rjv-container.demo-search-highlight-underline .rjv-plain-line-match {
+    background: transparent;
+    box-shadow: inset 0 -2px 0 #bf6a00;
+}
+
+.rjv-container.demo-search-highlight-none .rjv-row-match,
+.rjv-container.demo-search-highlight-none .rjv-plain-line-match {
+    background: transparent;
+    box-shadow: none;
+    outline: none;
+}
+
 .mode-doc-panel {
     display: grid;
     gap: 12px;

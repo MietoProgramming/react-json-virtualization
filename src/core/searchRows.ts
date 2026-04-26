@@ -6,6 +6,7 @@ interface SearchRowsByQueriesOptions {
   caseSensitive?: boolean;
   mode?: PathFilterMode;
   index?: PathSearchIndex;
+  includeStructuredValueMatch?: boolean;
 }
 
 interface QueryDefinition {
@@ -49,7 +50,10 @@ const normalizeValue = (value: string, caseSensitive: boolean): string => {
   return caseSensitive ? value : value.toLowerCase();
 };
 
-const toSearchableValue = (row: FlatJsonRow): string | null => {
+const toSearchableValue = (
+  row: FlatJsonRow,
+  includeStructuredValueMatch: boolean
+): string | null => {
   switch (row.valueType) {
     case "string":
       return row.rawValue as string;
@@ -60,7 +64,7 @@ const toSearchableValue = (row: FlatJsonRow): string | null => {
       return "null";
     case "object":
     case "array":
-      return JSON.stringify(row.rawValue);
+      return includeStructuredValueMatch ? JSON.stringify(row.rawValue) : null;
     default:
       return null;
   }
@@ -135,6 +139,7 @@ export const searchRowsByQueries = (
 ): TreeSearchResult => {
   const caseSensitive = options.caseSensitive ?? false;
   const mode = options.mode ?? "auto";
+  const includeStructuredValueMatch = options.includeStructuredValueMatch ?? true;
 
   const definitions = queries
     .map((query) => createQueryDefinition(query, mode, caseSensitive, rows, options.index))
@@ -155,7 +160,7 @@ export const searchRowsByQueries = (
 
   rows.forEach((row) => {
     const normalizedPath = normalizeValue(row.path, caseSensitive);
-    const value = toSearchableValue(row);
+    const value = toSearchableValue(row, includeStructuredValueMatch);
     const normalizedValueString = value === null ? null : normalizeValue(value, caseSensitive);
     const matchesAllQueries = definitions.every((definition) =>
       matchesQueryDefinition(row, definition, normalizedPath, normalizedValueString, mode)

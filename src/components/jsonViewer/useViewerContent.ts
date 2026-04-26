@@ -5,12 +5,7 @@ import { flattenJson } from "../../core/flatten";
 import { normalizeQuery, searchPrettyLinesByQueries, searchRowsByQueries } from "../../core/search";
 import type { FlatJsonRow, JSONValue, JSONViewerSearchMetadata } from "../../core/types";
 import { toPrettyLines } from "./prettyLines";
-import {
-    buildQueryParts,
-    buildSearchMetadata,
-    EMPTY_MATCHED_PATHS,
-    EMPTY_MATCHED_PRETTY_LINE_INDEXES
-} from "./searchMetadata";
+import { buildQueryParts, buildSearchMetadata, EMPTY_MATCHED_PATHS, EMPTY_MATCHED_PRETTY_LINE_INDEXES } from "./searchMetadata";
 
 interface UseViewerContentParams {
   metadata: boolean;
@@ -70,15 +65,22 @@ export const useViewerContent = ({
 
   const normalizedPathFilterQuery = normalizeQuery(pathFilterQuery);
   const normalizedSearchQuery = normalizeQuery(searchQuery);
-  const queryParts = useMemo(
-    () => buildQueryParts(normalizedPathFilterQuery, normalizedSearchQuery),
-    [normalizedPathFilterQuery, normalizedSearchQuery]
-  );
+  const filterQueryParts = useMemo(() => buildQueryParts(normalizedPathFilterQuery), [normalizedPathFilterQuery]);
+  const searchQueryParts = useMemo(() => buildQueryParts(normalizedSearchQuery), [normalizedSearchQuery]);
   const shouldBuildPathSearchIndex = useMemo(() => {
-    return metadata && queryParts.some((query) => {
+    if (!metadata) {
+      return false;
+    }
+
+    const isFilterPrefix = filterQueryParts.some((query) => {
       return canUsePrefixPathSearchIndex(splitFilterQueryTerms(query), pathFilterMode);
     });
-  }, [metadata, pathFilterMode, queryParts]);
+    const isSearchPrefix = searchQueryParts.some((query) => {
+      return canUsePrefixPathSearchIndex(splitFilterQueryTerms(query), pathFilterMode);
+    });
+
+    return isFilterPrefix || isSearchPrefix;
+  }, [metadata, pathFilterMode, filterQueryParts, searchQueryParts]);
 
   const pathSearchIndex = useMemo(() => {
     if (!shouldBuildPathSearchIndex) {
@@ -88,21 +90,39 @@ export const useViewerContent = ({
     return createPathSearchIndex(rows, { caseSensitive: pathFilterCaseSensitive });
   }, [pathFilterCaseSensitive, rows, shouldBuildPathSearchIndex]);
 
-  const treeSearchResult = useMemo(() => {
+  const filterResult = useMemo(() => {
     if (!metadata) {
       return undefined;
     }
 
-    return searchRowsByQueries(rows, queryParts, {
+    return searchRowsByQueries(rows, filterQueryParts, {
       caseSensitive: pathFilterCaseSensitive,
       mode: pathFilterMode,
       index: pathSearchIndex
     });
-  }, [metadata, pathFilterCaseSensitive, pathFilterMode, pathSearchIndex, queryParts, rows]);
-  const filteredRows = metadata ? (treeSearchResult?.filteredRows ?? []) : [];
-  const matchedPathSet = metadata
-    ? (treeSearchResult?.directMatchPathSet ?? EMPTY_MATCHED_PATHS)
-    : EMPTY_MATCHED_PATHS;
+  }, [metadata, pathFilterCaseSensitive, pathFilterMode, pathSearchIndex, filterQueryParts, rows]);
+  const filteredRows = metadata ? (filterResult?.filteredRows ?? rows) : [];
+  const searchIndex = filterQueryParts.length === 0 ? pathSearchIndex : undefined;
+  const matchSearchResult = useMemo(() => {
+    if (!metadata || searchQueryParts.length === 0) {
+      return undefined;
+    }
+
+    return searchRowsByQueries(filteredRows, searchQueryParts, {
+      caseSensitive: pathFilterCaseSensitive,
+      mode: pathFilterMode,
+      index: searchIndex,
+      includeStructuredValueMatch: false
+    });
+  }, [
+    filteredRows,
+    metadata,
+    pathFilterCaseSensitive,
+    pathFilterMode,
+    searchIndex,
+    searchQueryParts
+  ]);
+  const matchedPathSet = metadata ? (matchSearchResult?.directMatchPathSet ?? EMPTY_MATCHED_PATHS) : EMPTY_MATCHED_PATHS;
 
   const prettyLines = useMemo(() => {
     if (metadata) {
@@ -112,23 +132,28 @@ export const useViewerContent = ({
     return toPrettyLines(json);
   }, [json, metadata]);
 
-  const plainSearchResult = useMemo(() => {
+  const filterPlainResult = useMemo(() => {
     if (metadata) {
       return undefined;
     }
 
-    return searchPrettyLinesByQueries(prettyLines, queryParts, pathFilterCaseSensitive);
-  }, [metadata, pathFilterCaseSensitive, prettyLines, queryParts]);
-  const filteredPrettyLineIndexes = metadata
-    ? []
-    : (plainSearchResult?.filteredLineIndexes ?? []);
+    return searchPrettyLinesByQueries(prettyLines, filterQueryParts, pathFilterCaseSensitive);
+  }, [metadata, pathFilterCaseSensitive, prettyLines, filterQueryParts]);
+  const filteredPrettyLineIndexes = metadata ? [] : (filterPlainResult?.filteredLineIndexes ?? []);
+  const matchPlainResult = useMemo(() => {
+    if (metadata || searchQueryParts.length === 0) {
+      return undefined;
+    }
+
+    return searchPrettyLinesByQueries(prettyLines, searchQueryParts, pathFilterCaseSensitive);
+  }, [metadata, pathFilterCaseSensitive, prettyLines, searchQueryParts]);
   const matchedPrettyLineIndexSet = useMemo(() => {
-    if (metadata || !plainSearchResult || plainSearchResult.matchedLineIndexes.length === 0) {
+    if (metadata || !matchPlainResult || matchPlainResult.matchedLineIndexes.length === 0) {
       return EMPTY_MATCHED_PRETTY_LINE_INDEXES;
     }
 
-    return new Set<number>(plainSearchResult.matchedLineIndexes);
-  }, [metadata, plainSearchResult]);
+    return new Set<number>(matchPlainResult.matchedLineIndexes);
+  }, [metadata, matchPlainResult]);
 
   const rowsByPath = useMemo(() => {
     const index = new Map<string, FlatJsonRow>();
@@ -144,16 +169,19 @@ export const useViewerContent = ({
       pathFilterQuery: normalizedPathFilterQuery,
       searchQuery: normalizedSearchQuery,
       searchMetadataLimit,
-      treeSearchResult,
-      plainSearchResult
+      treeSearchResult: matchSearchResult,
+      plainSearchResult: matchPlainResult,
+      visibleCount: metadata ? filteredRows.length : filteredPrettyLineIndexes.length
     });
   }, [
     metadata,
     normalizedPathFilterQuery,
     normalizedSearchQuery,
-    plainSearchResult,
+    filteredPrettyLineIndexes.length,
+    filteredRows.length,
+    matchPlainResult,
     searchMetadataLimit,
-    treeSearchResult
+    matchSearchResult
   ]);
 
   return {

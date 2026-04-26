@@ -83,38 +83,38 @@ Environment:
 
 Scope:
 
-- `Collapsable` and `Static` measure mode-specific content preparation on a pre-parsed root.
+- `Collapsable` and `Static` include parse + expansion + flatten work.
 - `Plain (metadata=false)` measures pretty-line generation behavior used in plain mode.
 
 ### large-10mb.json (10.00 MB)
 
 | Mode | Avg (ms) | Min (ms) | Max (ms) | Output size | vs Collapsable |
 | --- | ---: | ---: | ---: | ---: | ---: |
-| `Collapsable (metadata=true, depth=1)` | 9.75 | 7.62 | 11.83 | 64,838 rows | 1.00x |
-| `Static (metadata=true, alwaysExpanded)` | 370.45 | 309.81 | 404.46 | 842,834 rows | 38.00x |
-| `Plain (metadata=false)` | 146.68 | 141.29 | 158.97 | 1,037,335 lines | 15.05x |
+| `Collapsable (metadata=true, depth=1)` | 1024.77 | 1017.08 | 1042.66 | 64,838 rows | 1.00x |
+| `Static (metadata=true, alwaysExpanded)` | 1384.20 | 1308.87 | 1468.24 | 842,834 rows | 1.35x |
+| `Plain (metadata=false)` | 136.72 | 127.33 | 143.63 | 1,037,335 lines | 0.13x |
 
 ### large-50mb.json (50.00 MB)
 
 | Mode | Avg (ms) | Min (ms) | Max (ms) | Output size | vs Collapsable |
 | --- | ---: | ---: | ---: | ---: | ---: |
-| `Collapsable (metadata=true, depth=1)` | 87.85 | 68.78 | 130.65 | 324,181 rows | 1.00x |
-| `Static (metadata=true, alwaysExpanded)` | 2192.44 | 1937.74 | 2477.58 | 4,214,293 rows | 24.96x |
-| `Plain (metadata=false)` | 850.72 | 817.88 | 902.08 | 5,186,823 lines | 9.68x |
+| `Collapsable (metadata=true, depth=1)` | 5230.99 | 4973.87 | 5534.76 | 324,181 rows | 1.00x |
+| `Static (metadata=true, alwaysExpanded)` | 7630.65 | 7380.08 | 8191.26 | 4,214,293 rows | 1.46x |
+| `Plain (metadata=false)` | 911.44 | 839.57 | 1030.96 | 5,186,823 lines | 0.17x |
 
 ### large-100mb.json (100.00 MB)
 
 | Mode | Avg (ms) | Min (ms) | Max (ms) | Output size | vs Collapsable |
 | --- | ---: | ---: | ---: | ---: | ---: |
-| `Collapsable (metadata=true, depth=1)` | 191.35 | 160.53 | 307.84 | 648,359 rows | 1.00x |
-| `Static (metadata=true, alwaysExpanded)` | 4463.40 | 4364.28 | 4574.43 | 8,428,607 rows | 23.33x |
-| `Plain (metadata=false)` | 1856.35 | 1774.53 | 1963.01 | 10,373,671 lines | 9.70x |
+| `Collapsable (metadata=true, depth=1)` | 10771.17 | 10303.29 | 11218.33 | 648,359 rows | 1.00x |
+| `Static (metadata=true, alwaysExpanded)` | 16062.59 | 15595.29 | 16422.84 | 8,428,607 rows | 1.49x |
+| `Plain (metadata=false)` | 1776.98 | 1639.63 | 1935.16 | 10,373,671 lines | 0.16x |
 
 Interpretation:
 
-- `Static` remains significantly heavier on deep/large JSON because all branches are expanded before flattening.
-- `Collapsable` remains fastest in these snapshots because shallow expansion keeps row counts much lower.
-- `Plain` avoids tree flattening but still pays for pretty-line generation on minified JSON.
+- `Plain` is much faster in end-to-end snapshots because metadata=false bypasses incremental tree parsing and flattening.
+- `Collapsable` is slower than plain because it still parses JSON and builds tree rows.
+- `Static` remains heavier than Collapsable because full expansion increases expansion and flatten work.
 
 ## Choosing a mode
 

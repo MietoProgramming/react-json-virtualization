@@ -62,6 +62,18 @@ const summarizeDurations = (durations) => {
 
 const toFixed2 = (value) => value.toFixed(2);
 
+const toPrettyLineCount = (input) => {
+  if (input.includes("\n") || input.includes("\r")) {
+    return input.split(/\r?\n/).length;
+  }
+
+  try {
+    return JSON.stringify(JSON.parse(input), null, 2).split(/\r?\n/).length;
+  } catch {
+    return input.split(/\r?\n/).length;
+  }
+};
+
 const formatMarkdown = (fixtureName, fixtureSizeMb, rows) => {
   const baseline = rows.find((row) => row.mode === "Collapsable (metadata=true, depth=1)")?.avgMs ?? 1;
 
@@ -96,21 +108,20 @@ const run = async () => {
   console.log(`Platform: ${process.platform} ${process.arch}`);
   console.log(`Iterations per mode: ${iterations}`);
   console.log("");
-  console.log("This benchmark measures mode-specific content preparation work.");
-  console.log("Collapsable and Static are measured on a pre-parsed JSON root.");
-  console.log("Plain mode follows metadata=false behavior (pretty-line generation).");
+  console.log("This benchmark measures end-to-end viewer-like mode work.");
+  console.log("Collapsable and Static include parse + expansion + flatten work.");
+  console.log("Plain mode follows metadata=false behavior (pretty-line generation only).");
 
   for (const fileName of selectedFixtures) {
     const filePath = resolve(fixturesDir, fileName);
     const input = await readFile(filePath, "utf8");
     const fixtureSizeMb = (Buffer.byteLength(input, "utf8") / (1024 * 1024)).toFixed(2);
 
-    const root = await parseJsonIncremental(input, { yieldIntervalMs: 8 });
-
     const modeRunners = [
       {
         mode: "Collapsable (metadata=true, depth=1)",
-        runMode: () => {
+        runMode: async () => {
+          const root = await parseJsonIncremental(input, { yieldIntervalMs: 8 });
           const expandedPaths = expandedPathsFromDepth(root, 1);
           const rows = flattenJson(root, expandedPaths, { metadata: true });
           return rows.length;
@@ -118,7 +129,8 @@ const run = async () => {
       },
       {
         mode: "Static (metadata=true, alwaysExpanded)",
-        runMode: () => {
+        runMode: async () => {
+          const root = await parseJsonIncremental(input, { yieldIntervalMs: 8 });
           const expandedPaths = expandedPathsFromDepth(root, Number.POSITIVE_INFINITY);
           const rows = flattenJson(root, expandedPaths, { metadata: true });
           return rows.length;
@@ -126,28 +138,21 @@ const run = async () => {
       },
       {
         mode: "Plain (metadata=false)",
-        runMode: () => {
-          if (input.includes("\n") || input.includes("\r")) {
-            return input.split(/\r?\n/).length;
-          }
-
-          const pretty = JSON.stringify(JSON.parse(input), null, 2);
-          return pretty.split(/\r?\n/).length;
-        }
+        runMode: async () => toPrettyLineCount(input)
       }
     ];
 
     const rows = [];
 
     for (const modeRunner of modeRunners) {
-      modeRunner.runMode();
+      await modeRunner.runMode();
 
       const durations = [];
       let outputSize = 0;
 
       for (let index = 0; index < iterations; index += 1) {
         const startedAt = performance.now();
-        outputSize = modeRunner.runMode();
+        outputSize = await modeRunner.runMode();
         durations.push(performance.now() - startedAt);
       }
 

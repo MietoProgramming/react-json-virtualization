@@ -2,6 +2,7 @@ import React, { useCallback, useMemo, useRef, useState } from "react";
 import {
   VirtualizeJSON,
   type FlatJsonRow,
+  type JSONViewerSearchMetadata,
   type JsonThemeOverride,
   type PathFilterMode
 } from "react-json-virtualization";
@@ -60,6 +61,16 @@ const themePresets: Array<{ name: string; value: JsonThemeOverride }> = [
   }
 ];
 
+type SearchHighlightMode = "default" | "left-rail" | "outline" | "underline" | "none";
+
+const searchHighlightOptions: Array<{ label: string; value: SearchHighlightMode }> = [
+  { label: "Default fill", value: "default" },
+  { label: "Left rail", value: "left-rail" },
+  { label: "Dashed outline", value: "outline" },
+  { label: "Underline", value: "underline" },
+  { label: "None", value: "none" }
+];
+
 async function readFileAsText(file: File): Promise<string> {
   return await file.text();
 }
@@ -81,6 +92,10 @@ export function App(): React.ReactElement {
   const [pathFilterQuery, setPathFilterQuery] = useState<string>("");
   const [pathFilterCaseSensitive, setPathFilterCaseSensitive] = useState<boolean>(false);
   const [pathFilterMode, setPathFilterMode] = useState<PathFilterMode>("auto");
+  const [searchQuery, setSearchQuery] = useState<string>("");
+  const [searchHighlightMode, setSearchHighlightMode] = useState<SearchHighlightMode>("default");
+  const [searchMetadataLimit, setSearchMetadataLimit] = useState<number>(500);
+  const [searchMetadata, setSearchMetadata] = useState<JSONViewerSearchMetadata | null>(null);
 
   const [isControlledExpansion, setIsControlledExpansion] = useState<boolean>(false);
   const [expandedPaths, setExpandedPaths] = useState<Set<string>>(new Set<string>());
@@ -100,6 +115,14 @@ export function App(): React.ReactElement {
   const selectedTheme = useMemo<JsonThemeOverride>(() => {
     return themePresets.find((preset) => preset.name === themePresetName)?.value ?? {};
   }, [themePresetName]);
+
+  const searchHighlightClassName = useMemo(() => {
+    if (searchHighlightMode === "default") {
+      return undefined;
+    }
+
+    return `demo-search-highlight-${searchHighlightMode}`;
+  }, [searchHighlightMode]);
 
   const resetInteractiveState = useCallback(() => {
     setParseError(null);
@@ -362,6 +385,20 @@ export function App(): React.ReactElement {
               ))}
             </select>
           </label>
+
+          <label>
+            Search highlight style
+            <select
+              value={searchHighlightMode}
+              onChange={(event) => setSearchHighlightMode(event.target.value as SearchHighlightMode)}
+            >
+              {searchHighlightOptions.map((option) => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
+          </label>
         </div>
 
         <div className="field-grid">
@@ -372,6 +409,27 @@ export function App(): React.ReactElement {
               placeholder='e.g. zero hello, "new york" name, or $.users[1]'
               value={pathFilterQuery}
               onChange={(event) => setPathFilterQuery(event.target.value)}
+            />
+          </label>
+
+          <label>
+            Search query (highlights matches, no filtering)
+            <input
+              type="text"
+              placeholder='e.g. Ada active or "new york"'
+              value={searchQuery}
+              onChange={(event) => setSearchQuery(event.target.value)}
+            />
+          </label>
+
+          <label>
+            Search metadata limit
+            <input
+              type="number"
+              min={0}
+              max={2000}
+              value={searchMetadataLimit}
+              onChange={(event) => setSearchMetadataLimit(Number(event.target.value))}
             />
           </label>
         </div>
@@ -401,6 +459,8 @@ export function App(): React.ReactElement {
             onClick={() => {
               setSelectedPath("$");
               setPathFilterQuery("");
+              setSearchQuery("");
+              setSearchMetadata(null);
               setExpandedPaths(new Set<string>());
             }}
           >
@@ -418,6 +478,17 @@ export function App(): React.ReactElement {
           <li>Metadata mode: {metadata ? "enabled" : "disabled"}</li>
           <li>Pretty line numbers: {metadata ? "n/a" : showLineNumbers ? "on" : "off"}</li>
           <li>Selected path: {selectedPath}</li>
+          <li>Search query: {searchQuery || "none"}</li>
+          <li>Search highlight style: {searchHighlightMode}</li>
+          <li>
+            Search matches: {
+              searchMetadata?.query
+                ? `${searchMetadata.matchCount} direct (${searchMetadata.visibleCount} visible)`
+                : "none"
+            }
+          </li>
+          <li>Search mode: {searchMetadata?.mode ?? "n/a"}</li>
+          <li>Search capped: {searchMetadata ? (searchMetadata.hasMore ? "yes" : "no") : "n/a"}</li>
           <li>
             Controlled expanded paths: {viewerMode === "collapsable" ? expandedPaths.size : "n/a (static)"}
           </li>
@@ -443,13 +514,19 @@ export function App(): React.ReactElement {
               setExpandedPaths(new Set<string>(nextPaths));
             }}
             pathFilterQuery={pathFilterQuery}
+            searchQuery={searchQuery}
             pathFilterCaseSensitive={pathFilterCaseSensitive}
             pathFilterMode={pathFilterMode}
+            searchMetadataLimit={searchMetadataLimit}
             theme={selectedTheme}
+            className={searchHighlightClassName}
             selectedPath={selectedPath}
             onNodeClick={(path, row) => {
               setSelectedPath(path);
               setLastClickedRow(row);
+            }}
+            onSearchMetadata={(metadataResult) => {
+              setSearchMetadata(metadataResult);
             }}
             onParseProgress={(processed, total) => {
               setParseProgress({ processed, total });
@@ -467,13 +544,19 @@ export function App(): React.ReactElement {
             rowHeight={rowHeight}
             overscan={overscan}
             pathFilterQuery={pathFilterQuery}
+            searchQuery={searchQuery}
             pathFilterCaseSensitive={pathFilterCaseSensitive}
             pathFilterMode={pathFilterMode}
+            searchMetadataLimit={searchMetadataLimit}
             theme={selectedTheme}
+            className={searchHighlightClassName}
             selectedPath={selectedPath}
             onNodeClick={(path, row) => {
               setSelectedPath(path);
               setLastClickedRow(row);
+            }}
+            onSearchMetadata={(metadataResult) => {
+              setSearchMetadata(metadataResult);
             }}
             onParseProgress={(processed, total) => {
               setParseProgress({ processed, total });

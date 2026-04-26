@@ -64,27 +64,27 @@ const benchmarkSnapshots: Array<{
     fixture: "large-10mb.json",
     sizeMb: "10.00",
     rows: [
-      { mode: "Collapsable (metadata=true, depth=1)", avgMs: "9.75", relative: "1.00x", outputSize: "64,838 rows" },
-      { mode: "Static (metadata=true, alwaysExpanded)", avgMs: "370.45", relative: "38.00x", outputSize: "842,834 rows" },
-      { mode: "Plain (metadata=false)", avgMs: "146.68", relative: "15.05x", outputSize: "1,037,335 lines" }
+      { mode: "Collapsable (metadata=true, depth=1)", avgMs: "1024.77", relative: "1.00x", outputSize: "64,838 rows" },
+      { mode: "Static (metadata=true, alwaysExpanded)", avgMs: "1384.20", relative: "1.35x", outputSize: "842,834 rows" },
+      { mode: "Plain (metadata=false)", avgMs: "136.72", relative: "0.13x", outputSize: "1,037,335 lines" }
     ]
   },
   {
     fixture: "large-50mb.json",
     sizeMb: "50.00",
     rows: [
-      { mode: "Collapsable (metadata=true, depth=1)", avgMs: "87.85", relative: "1.00x", outputSize: "324,181 rows" },
-      { mode: "Static (metadata=true, alwaysExpanded)", avgMs: "2192.44", relative: "24.96x", outputSize: "4,214,293 rows" },
-      { mode: "Plain (metadata=false)", avgMs: "850.72", relative: "9.68x", outputSize: "5,186,823 lines" }
+      { mode: "Collapsable (metadata=true, depth=1)", avgMs: "5230.99", relative: "1.00x", outputSize: "324,181 rows" },
+      { mode: "Static (metadata=true, alwaysExpanded)", avgMs: "7630.65", relative: "1.46x", outputSize: "4,214,293 rows" },
+      { mode: "Plain (metadata=false)", avgMs: "911.44", relative: "0.17x", outputSize: "5,186,823 lines" }
     ]
   },
   {
     fixture: "large-100mb.json",
     sizeMb: "100.00",
     rows: [
-      { mode: "Collapsable (metadata=true, depth=1)", avgMs: "191.35", relative: "1.00x", outputSize: "648,359 rows" },
-      { mode: "Static (metadata=true, alwaysExpanded)", avgMs: "4463.40", relative: "23.33x", outputSize: "8,428,607 rows" },
-      { mode: "Plain (metadata=false)", avgMs: "1856.35", relative: "9.70x", outputSize: "10,373,671 lines" }
+      { mode: "Collapsable (metadata=true, depth=1)", avgMs: "10771.17", relative: "1.00x", outputSize: "648,359 rows" },
+      { mode: "Static (metadata=true, alwaysExpanded)", avgMs: "16062.59", relative: "1.49x", outputSize: "8,428,607 rows" },
+      { mode: "Plain (metadata=false)", avgMs: "1776.98", relative: "0.16x", outputSize: "10,373,671 lines" }
     ]
   }
 ];
@@ -154,8 +154,8 @@ export function VirtualizeJSONModeDoc(): React.ReactElement {
 
       <h3>Benchmark snapshot</h3>
       <p className="mode-doc-benchmark-caption">
-        Node v24.14.1, linux x64, 5 iterations per mode. Fixtures from
-        bench/fixtures/generated.
+        End-to-end viewer-like benchmark: tree modes include parse + expansion + flatten,
+        plain mode includes pretty-line generation. Node v24.14.1, linux x64, 5 iterations.
       </p>
       {benchmarkSnapshots.map((snapshot) => (
         <div className="mode-doc-benchmark-block" key={snapshot.fixture}>

@@ -75,6 +75,7 @@ describe("useViewerContent", () => {
       root,
       activeExpandedPaths: new Set(["$", "$.users", "$.users[0]", "$.profile"]),
       pathFilterQuery: "users[0].name",
+      searchQuery: "$.users[0].name",
       pathFilterCaseSensitive: false,
       pathFilterMode: "auto"
     });
@@ -88,34 +89,45 @@ describe("useViewerContent", () => {
     expect(result.matchedPathSet.has("$.users[0].name")).toBe(true);
     expect(result.matchedPathSet.has("$.users")).toBe(false);
     expect(result.searchMetadata.mode).toBe("tree");
+    expect(result.searchMetadata.query).toBe("$.users[0].name");
     expect(result.searchMetadata.matchCount).toBe(1);
     expect(result.searchMetadata.visibleCount).toBe(4);
     expect(result.searchMetadata.matchedPaths).toEqual(["$.users[0].name"]);
     expect(result.searchMetadata.hasMore).toBe(false);
   });
 
-  it("combines pathFilterQuery and searchQuery with AND semantics", () => {
+  it("does not filter rows when only searchQuery is set", () => {
     const root: JSONValue = {
       users: [{ name: "Ada" }, { name: "Linus" }],
       profile: { city: "Gdansk" }
     };
+
+    const base = runUseViewerContent({
+      metadata: true,
+      json: JSON.stringify(root),
+      root,
+      activeExpandedPaths: new Set(["$", "$.users", "$.users[0]", "$.users[1]", "$.profile"]),
+      pathFilterQuery: "",
+      pathFilterCaseSensitive: false,
+      pathFilterMode: "auto"
+    });
 
     const result = runUseViewerContent({
       metadata: true,
       json: JSON.stringify(root),
       root,
       activeExpandedPaths: new Set(["$", "$.users", "$.users[0]", "$.users[1]", "$.profile"]),
-      pathFilterQuery: "$.users[0].name",
+      pathFilterQuery: "",
       searchQuery: "Linus",
       pathFilterCaseSensitive: false,
       pathFilterMode: "auto"
     });
 
-    expect(result.filteredRows).toEqual([]);
-    expect(result.matchedPathSet.size).toBe(0);
-    expect(result.searchMetadata.matchCount).toBe(0);
-    expect(result.searchMetadata.visibleCount).toBe(0);
-    expect(result.searchMetadata.query).toBe("$.users[0].name && Linus");
+    expect(result.filteredRows.map((row) => row.path)).toEqual(
+      base.filteredRows.map((row) => row.path)
+    );
+    expect(result.matchedPathSet.size).toBeGreaterThan(0);
+    expect(result.searchMetadata.query).toBe("Linus");
   });
 
   it("caps metadata match payloads and sets hasMore", () => {
@@ -129,6 +141,7 @@ describe("useViewerContent", () => {
       root,
       activeExpandedPaths: new Set(["$", "$.users", "$.users[0]", "$.users[1]", "$.users[2]" ]),
       pathFilterQuery: "name",
+      searchQuery: "Ada",
       pathFilterCaseSensitive: false,
       pathFilterMode: "auto",
       searchMetadataLimit: 1
@@ -181,7 +194,7 @@ describe("useViewerContent", () => {
     expect(result.filteredItemCount).toBe(1);
   });
 
-  it("supports AND semantics and metadata payload in pretty line mode", () => {
+  it("highlights matches without filtering in pretty line mode", () => {
     const json = `{
   "city": "new york",
   "other": "new jersey"
@@ -192,19 +205,43 @@ describe("useViewerContent", () => {
       json,
       root: null,
       activeExpandedPaths: new Set<string>(),
-      pathFilterQuery: "new",
+      pathFilterQuery: "",
       searchQuery: "york",
       pathFilterCaseSensitive: false,
       pathFilterMode: "auto"
     });
 
-    expect(result.filteredPrettyLineIndexes).toEqual([1]);
+    expect(result.filteredPrettyLineIndexes).toEqual([0, 1, 2, 3]);
     expect(result.matchedPrettyLineIndexSet.has(1)).toBe(true);
     expect(result.searchMetadata.mode).toBe("plain");
-    expect(result.searchMetadata.query).toBe("new && york");
+    expect(result.searchMetadata.query).toBe("york");
     expect(result.searchMetadata.matchCount).toBe(1);
-    expect(result.searchMetadata.visibleCount).toBe(1);
+    expect(result.searchMetadata.visibleCount).toBe(4);
     expect(result.searchMetadata.matchedLineNumbers).toEqual([2]);
     expect(result.searchMetadata.matchedRowIds).toEqual(["line:2"]);
+  });
+
+  it("keeps filter rows and highlights only matching row for search", () => {
+    const root: JSONValue = {
+      emptyObject: {},
+      emptyArray: []
+    };
+
+    const result = runUseViewerContent({
+      metadata: true,
+      json: JSON.stringify(root),
+      root,
+      activeExpandedPaths: new Set(["$"]),
+      pathFilterQuery: "empty",
+      searchQuery: "Arr",
+      pathFilterCaseSensitive: false,
+      pathFilterMode: "auto"
+    });
+
+    expect(result.filteredRows.map((row) => row.path)).toEqual(["$", "$.emptyObject", "$.emptyArray"]);
+    expect(result.matchedPathSet.has("$.emptyArray")).toBe(true);
+    expect(result.matchedPathSet.has("$.emptyObject")).toBe(false);
+    expect(result.searchMetadata.matchCount).toBe(1);
+    expect(result.searchMetadata.visibleCount).toBe(3);
   });
 });
