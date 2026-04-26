@@ -8,7 +8,9 @@ interface JSONViewerPlainContentProps {
   rowHeight: number;
   startIndex: number;
   visiblePrettyLines: string[];
+  visiblePrettyLineIndexes: number[];
   visiblePrettyLineNumbers: string;
+  matchedPrettyLineIndexes: ReadonlySet<number>;
 }
 
 export function JSONViewerPlainContent({
@@ -18,7 +20,9 @@ export function JSONViewerPlainContent({
   rowHeight,
   startIndex,
   visiblePrettyLines,
-  visiblePrettyLineNumbers
+  visiblePrettyLineIndexes,
+  visiblePrettyLineNumbers,
+  matchedPrettyLineIndexes
 }: JSONViewerPlainContentProps): React.ReactElement {
   return (
     <>
@@ -34,7 +38,14 @@ export function JSONViewerPlainContent({
             <div className="rjv-plain-line">&nbsp;</div>
           ) : (
             visiblePrettyLines.map((line, lineOffset) => (
-              <div className="rjv-plain-line" key={startIndex + lineOffset}>
+              <div
+                className={
+                  matchedPrettyLineIndexes.has(visiblePrettyLineIndexes[lineOffset])
+                    ? "rjv-plain-line rjv-plain-line-match"
+                    : "rjv-plain-line"
+                }
+                key={startIndex + lineOffset}
+              >
                 {tokenizePrettyLine(line).map((token, tokenIndex) => (
                   <span key={`${startIndex + lineOffset}-${tokenIndex}`} className={token.className}>
                     {token.text || " "}

@@ -28,6 +28,21 @@ export interface FlatJsonRow {
   isExpanded: boolean;
 }
 
+export type SearchMetadataMode = "tree" | "plain";
+
+export interface JSONViewerSearchMetadata {
+  mode: SearchMetadataMode;
+  query: string;
+  pathFilterQuery: string;
+  searchQuery: string;
+  matchCount: number;
+  visibleCount: number;
+  matchedPaths: string[];
+  matchedRowIds: string[];
+  matchedLineNumbers: number[];
+  hasMore: boolean;
+}
+
 export interface ParseOptions {
   yieldIntervalMs?: number;
   signal?: AbortSignal;

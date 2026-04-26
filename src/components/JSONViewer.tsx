@@ -1,17 +1,22 @@
 import React, { useMemo, useState } from "react";
 import { createExpandedPathSet, expandedPathsFromDepth } from "../core/expansion";
 import { type PathFilterMode } from "../core/filter";
-import type { FlatJsonRow } from "../core/types";
+import { resolveSourceFormat, supportsTreeMetadata, type SourceFormat } from "../core/sourceFormat";
+import type { FlatJsonRow, JSONViewerSearchMetadata } from "../core/types";
 import { useVirtualization } from "../hooks/useVirtualization";
 import { resolveTheme, type JsonThemeOverride } from "../theme";
 import { JSONViewerPlainContent } from "./jsonViewer/JSONViewerPlainContent";
 import { JSONViewerTreeContent } from "./jsonViewer/JSONViewerTreeContent";
 import { useParsedJsonState } from "./jsonViewer/useParsedJsonState";
+import { useSearchMetadataCallback } from "./jsonViewer/useSearchMetadataCallback";
 import { useViewerContent } from "./jsonViewer/useViewerContent";
 import { useViewerInteractions } from "./jsonViewer/useViewerInteractions";
+import { useVirtualizedPrettyContent } from "./jsonViewer/useVirtualizedPrettyContent";
+import { createViewerStyle } from "./jsonViewer/viewerStyle";
 
 export interface JSONViewerProps {
   json: string;
+  sourceFormat?: SourceFormat;
   metadata?: boolean;
   showLineNumbers?: boolean;
   height?: number | string;
@@ -23,18 +28,22 @@ export interface JSONViewerProps {
   defaultExpandedPaths?: Iterable<string>;
   onExpandedPathsChange?: (paths: Set<string>) => void;
   pathFilterQuery?: string;
+  searchQuery?: string;
   pathFilterCaseSensitive?: boolean;
   pathFilterMode?: PathFilterMode;
+  searchMetadataLimit?: number;
   theme?: JsonThemeOverride;
   selectedPath?: string;
   className?: string;
   onNodeClick?: (path: string, row: FlatJsonRow) => void;
   onParseProgress?: (processedChars: number, totalChars: number) => void;
   onParseError?: (error: Error) => void;
+  onSearchMetadata?: (metadata: JSONViewerSearchMetadata) => void;
 }
 
 export function JSONViewer({
   json,
+  sourceFormat = "auto",
   metadata = true,
   showLineNumbers = true,
   height = 520,
@@ -46,19 +55,25 @@ export function JSONViewer({
   defaultExpandedPaths,
   onExpandedPathsChange,
   pathFilterQuery,
+  searchQuery,
   pathFilterCaseSensitive = false,
   pathFilterMode = "auto",
+  searchMetadataLimit = 500,
   theme,
   selectedPath,
   className,
   onNodeClick,
   onParseProgress,
-  onParseError
+  onParseError,
+  onSearchMetadata
 }: JSONViewerProps): React.ReactElement {
+  const resolvedSourceFormat = useMemo(() => resolveSourceFormat(json, sourceFormat), [json, sourceFormat]);
+  const usesMetadataTree = metadata && supportsTreeMetadata(resolvedSourceFormat);
   const isExpandedControlled = expandedPaths !== undefined;
   const { root, error, isParsing, internalExpandedPaths, setInternalExpandedPaths } = useParsedJsonState({
     json,
-    metadata,
+    sourceFormat: resolvedSourceFormat,
+    metadata: usesMetadataTree,
     alwaysExpanded,
     initialExpandDepth,
     defaultExpandedPaths,
@@ -68,70 +83,58 @@ export function JSONViewer({
     onExpandedPathsChange
   });
   const [internalSelectedPath, setInternalSelectedPath] = useState<string>("$");
-
   const fullyExpandedPaths = useMemo(() => {
-    if (!metadata || root === null) {
+    if (!usesMetadataTree || root === null) {
       return createExpandedPathSet();
     }
     return expandedPathsFromDepth(root, Number.POSITIVE_INFINITY);
-  }, [metadata, root]);
-
+  }, [root, usesMetadataTree]);
   const activeExpandedPaths = useMemo(
     () =>
-      !metadata
+      !usesMetadataTree
         ? createExpandedPathSet()
         :
       alwaysExpanded
         ? fullyExpandedPaths
         : createExpandedPathSet(expandedPaths ?? internalExpandedPaths),
-    [alwaysExpanded, expandedPaths, fullyExpandedPaths, internalExpandedPaths, metadata]
+    [alwaysExpanded, expandedPaths, fullyExpandedPaths, internalExpandedPaths, usesMetadataTree]
   );
-
-  const { filteredRows, rowsByPath, prettyLines, filteredPrettyLineIndexes, filteredItemCount } = useViewerContent({
-    metadata,
+  const {
+    filteredRows,
+    rowsByPath,
+    prettyLines,
+    filteredPrettyLineIndexes,
+    filteredItemCount,
+    matchedPathSet,
+    matchedPrettyLineIndexSet,
+    searchMetadata
+  } = useViewerContent({
+    metadata: usesMetadataTree,
     json,
     root,
     activeExpandedPaths,
     pathFilterQuery,
+    searchQuery,
     pathFilterCaseSensitive,
-    pathFilterMode
+    pathFilterMode,
+    searchMetadataLimit
   });
-
-  const {
-    containerRef,
-    onScroll,
-    startIndex,
-    endIndex,
-    topSpacerHeight,
-    bottomSpacerHeight
-  } = useVirtualization({
+  useSearchMetadataCallback(onSearchMetadata, searchMetadata);
+  const { containerRef, onScroll, startIndex, endIndex, topSpacerHeight, bottomSpacerHeight } = useVirtualization({
     rowCount: filteredItemCount,
     rowHeight,
     overscan
   });
-
   const virtualizedRows = filteredRows.slice(startIndex, endIndex);
-  const virtualizedPrettyLines = useMemo(() => {
-    if (metadata || filteredPrettyLineIndexes.length === 0) {
-      return [] as string[];
-    }
-
-    return filteredPrettyLineIndexes
-      .slice(startIndex, endIndex)
-      .map((lineIndex) => prettyLines[lineIndex]);
-  }, [endIndex, filteredPrettyLineIndexes, metadata, prettyLines, startIndex]);
-  const virtualizedPrettyLineNumbers = useMemo(() => {
-    if (metadata || !showLineNumbers || endIndex <= startIndex) {
-      return "";
-    }
-
-    return filteredPrettyLineIndexes
-      .slice(startIndex, endIndex)
-      .map((lineIndex) => String(lineIndex + 1))
-      .join("\n");
-  }, [endIndex, filteredPrettyLineIndexes, metadata, showLineNumbers, startIndex]);
+  const { visiblePrettyLines, visiblePrettyLineNumbers, visiblePrettyLineIndexes } = useVirtualizedPrettyContent({
+    metadata: usesMetadataTree,
+    showLineNumbers,
+    startIndex,
+    endIndex,
+    filteredPrettyLineIndexes,
+    prettyLines
+  });
   const activeSelectedPath = selectedPath ?? internalSelectedPath;
-
   const { onToggle, onSelect } = useViewerInteractions({
     alwaysExpanded,
     isExpandedControlled,
@@ -142,26 +145,9 @@ export function JSONViewer({
     setInternalSelectedPath,
     onNodeClick
   });
-
-  const resolvedTheme = resolveTheme(theme);
-
-  const style = {
-    height,
-    "--rjv-background": resolvedTheme.background,
-    "--rjv-row-hover": resolvedTheme.rowHover,
-    "--rjv-row-selected": resolvedTheme.rowSelected,
-    "--rjv-token-key": resolvedTheme.key,
-    "--rjv-token-punctuation": resolvedTheme.punctuation,
-    "--rjv-token-string": resolvedTheme.string,
-    "--rjv-token-number": resolvedTheme.number,
-    "--rjv-token-boolean": resolvedTheme.boolean,
-    "--rjv-token-null": resolvedTheme.null,
-    "--rjv-focus-ring": resolvedTheme.focusRing
-  } as React.CSSProperties;
-
+  const style = createViewerStyle(height, resolveTheme(theme));
   const rootClassName = className ? `rjv-container ${className}` : "rjv-container";
-  const rootRole = metadata ? "tree" : "region";
-
+  const rootRole = usesMetadataTree ? "tree" : "region";
   return (
     <div
       className={rootClassName}
@@ -170,14 +156,15 @@ export function JSONViewer({
       role={rootRole}
       style={style}
     >
-      {isParsing && <div className="rjv-status">Parsing JSON...</div>}
+      {isParsing && <div className="rjv-status">Parsing {resolvedSourceFormat.toUpperCase()}...</div>}
       {!isParsing && error && <div className="rjv-status rjv-status-error">{error}</div>}
       {!isParsing && !error && (
-        metadata ? (
+        usesMetadataTree ? (
           <JSONViewerTreeContent
             topSpacerHeight={topSpacerHeight}
             bottomSpacerHeight={bottomSpacerHeight}
             visibleRows={virtualizedRows}
+            matchedPaths={matchedPathSet}
             activeSelectedPath={activeSelectedPath}
             alwaysExpanded={alwaysExpanded}
             onToggle={onToggle}
@@ -190,8 +177,10 @@ export function JSONViewer({
             showLineNumbers={showLineNumbers}
             rowHeight={rowHeight}
             startIndex={startIndex}
-            visiblePrettyLines={virtualizedPrettyLines}
-            visiblePrettyLineNumbers={virtualizedPrettyLineNumbers}
+            visiblePrettyLines={visiblePrettyLines}
+            visiblePrettyLineIndexes={visiblePrettyLineIndexes}
+            visiblePrettyLineNumbers={visiblePrettyLineNumbers}
+            matchedPrettyLineIndexes={matchedPrettyLineIndexSet}
           />
         )
       )}

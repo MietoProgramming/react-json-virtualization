@@ -1,9 +1,11 @@
 import { useMemo } from "react";
-import { createPathSearchIndex, filterRowsByPathQuery, type PathFilterMode } from "../../core/filter";
+import { createPathSearchIndex, type PathFilterMode } from "../../core/filter";
 import { splitFilterQueryTerms } from "../../core/filterQuery";
 import { flattenJson } from "../../core/flatten";
-import type { FlatJsonRow, JSONValue } from "../../core/types";
-import { normalizeSearchInput } from "./prettyTokens";
+import { normalizeQuery, searchPrettyLinesByQueries, searchRowsByQueries } from "../../core/search";
+import type { FlatJsonRow, JSONValue, JSONViewerSearchMetadata } from "../../core/types";
+import { toPrettyLines } from "./prettyLines";
+import { buildQueryParts, buildSearchMetadata, EMPTY_MATCHED_PATHS, EMPTY_MATCHED_PRETTY_LINE_INDEXES } from "./searchMetadata";
 
 interface UseViewerContentParams {
   metadata: boolean;
@@ -11,8 +13,10 @@ interface UseViewerContentParams {
   root: JSONValue | null;
   activeExpandedPaths: ReadonlySet<string>;
   pathFilterQuery?: string;
+  searchQuery?: string;
   pathFilterCaseSensitive: boolean;
   pathFilterMode: PathFilterMode;
+  searchMetadataLimit?: number;
 }
 
 interface ViewerContentState {
@@ -21,6 +25,9 @@ interface ViewerContentState {
   prettyLines: string[];
   filteredPrettyLineIndexes: number[];
   filteredItemCount: number;
+  matchedPathSet: ReadonlySet<string>;
+  matchedPrettyLineIndexSet: ReadonlySet<number>;
+  searchMetadata: JSONViewerSearchMetadata;
 }
 
 const usesPrefixPathFiltering = (term: string, mode: PathFilterMode): boolean => {
@@ -44,8 +51,10 @@ export const useViewerContent = ({
   root,
   activeExpandedPaths,
   pathFilterQuery,
+  searchQuery,
   pathFilterCaseSensitive,
-  pathFilterMode
+  pathFilterMode,
+  searchMetadataLimit
 }: UseViewerContentParams): ViewerContentState => {
   const rows = useMemo(() => {
     if (!metadata || root === null) {
@@ -54,13 +63,24 @@ export const useViewerContent = ({
     return flattenJson(root, activeExpandedPaths, { metadata });
   }, [activeExpandedPaths, metadata, root]);
 
-  const normalizedFilterQuery = metadata ? (pathFilterQuery ?? "").trim() : "";
-  const metadataQueryTerms = useMemo(
-    () => splitFilterQueryTerms(normalizedFilterQuery),
-    [normalizedFilterQuery]
-  );
-  const shouldBuildPathSearchIndex =
-    metadata && canUsePrefixPathSearchIndex(metadataQueryTerms, pathFilterMode);
+  const normalizedPathFilterQuery = normalizeQuery(pathFilterQuery);
+  const normalizedSearchQuery = normalizeQuery(searchQuery);
+  const filterQueryParts = useMemo(() => buildQueryParts(normalizedPathFilterQuery), [normalizedPathFilterQuery]);
+  const searchQueryParts = useMemo(() => buildQueryParts(normalizedSearchQuery), [normalizedSearchQuery]);
+  const shouldBuildPathSearchIndex = useMemo(() => {
+    if (!metadata) {
+      return false;
+    }
+
+    const isFilterPrefix = filterQueryParts.some((query) => {
+      return canUsePrefixPathSearchIndex(splitFilterQueryTerms(query), pathFilterMode);
+    });
+    const isSearchPrefix = searchQueryParts.some((query) => {
+      return canUsePrefixPathSearchIndex(splitFilterQueryTerms(query), pathFilterMode);
+    });
+
+    return isFilterPrefix || isSearchPrefix;
+  }, [metadata, pathFilterMode, filterQueryParts, searchQueryParts]);
 
   const pathSearchIndex = useMemo(() => {
     if (!shouldBuildPathSearchIndex) {
@@ -70,60 +90,70 @@ export const useViewerContent = ({
     return createPathSearchIndex(rows, { caseSensitive: pathFilterCaseSensitive });
   }, [pathFilterCaseSensitive, rows, shouldBuildPathSearchIndex]);
 
-  const filteredRows = useMemo(
-    () =>
-      !metadata
-        ? []
-        : filterRowsByPathQuery(rows, pathFilterQuery, {
-            caseSensitive: pathFilterCaseSensitive,
-            mode: pathFilterMode,
-            index: pathSearchIndex
-          }),
-    [metadata, pathFilterCaseSensitive, pathFilterMode, pathFilterQuery, pathSearchIndex, rows]
-  );
+  const filterResult = useMemo(() => {
+    if (!metadata) {
+      return undefined;
+    }
+
+    return searchRowsByQueries(rows, filterQueryParts, {
+      caseSensitive: pathFilterCaseSensitive,
+      mode: pathFilterMode,
+      index: pathSearchIndex
+    });
+  }, [metadata, pathFilterCaseSensitive, pathFilterMode, pathSearchIndex, filterQueryParts, rows]);
+  const filteredRows = metadata ? (filterResult?.filteredRows ?? rows) : [];
+  const searchIndex = filterQueryParts.length === 0 ? pathSearchIndex : undefined;
+  const matchSearchResult = useMemo(() => {
+    if (!metadata || searchQueryParts.length === 0) {
+      return undefined;
+    }
+
+    return searchRowsByQueries(filteredRows, searchQueryParts, {
+      caseSensitive: pathFilterCaseSensitive,
+      mode: pathFilterMode,
+      index: searchIndex,
+      includeStructuredValueMatch: false
+    });
+  }, [
+    filteredRows,
+    metadata,
+    pathFilterCaseSensitive,
+    pathFilterMode,
+    searchIndex,
+    searchQueryParts
+  ]);
+  const matchedPathSet = metadata ? (matchSearchResult?.directMatchPathSet ?? EMPTY_MATCHED_PATHS) : EMPTY_MATCHED_PATHS;
 
   const prettyLines = useMemo(() => {
     if (metadata) {
       return [] as string[];
     }
 
-    if (json.includes("\n") || json.includes("\r")) {
-      return json.split(/\r?\n/);
-    }
-
-    try {
-      return JSON.stringify(JSON.parse(json), null, 2).split(/\r?\n/);
-    } catch {
-      return json.split(/\r?\n/);
-    }
+    return toPrettyLines(json);
   }, [json, metadata]);
 
-  const filteredPrettyLineIndexes = useMemo(() => {
+  const filterPlainResult = useMemo(() => {
     if (metadata) {
-      return [] as number[];
+      return undefined;
     }
 
-    const query = (pathFilterQuery ?? "").trim();
-    if (!query) {
-      return prettyLines.map((_line, index) => index);
+    return searchPrettyLinesByQueries(prettyLines, filterQueryParts, pathFilterCaseSensitive);
+  }, [metadata, pathFilterCaseSensitive, prettyLines, filterQueryParts]);
+  const filteredPrettyLineIndexes = metadata ? [] : (filterPlainResult?.filteredLineIndexes ?? []);
+  const matchPlainResult = useMemo(() => {
+    if (metadata || searchQueryParts.length === 0) {
+      return undefined;
     }
 
-    const terms = splitFilterQueryTerms(query);
-    if (terms.length === 0) {
-      return prettyLines.map((_line, index) => index);
+    return searchPrettyLinesByQueries(prettyLines, searchQueryParts, pathFilterCaseSensitive);
+  }, [metadata, pathFilterCaseSensitive, prettyLines, searchQueryParts]);
+  const matchedPrettyLineIndexSet = useMemo(() => {
+    if (metadata || !matchPlainResult || matchPlainResult.matchedLineIndexes.length === 0) {
+      return EMPTY_MATCHED_PRETTY_LINE_INDEXES;
     }
 
-    const needles = terms.map((term) => normalizeSearchInput(term, pathFilterCaseSensitive));
-    const indexes: number[] = [];
-    for (let index = 0; index < prettyLines.length; index += 1) {
-      const line = normalizeSearchInput(prettyLines[index], pathFilterCaseSensitive);
-      if (needles.some((needle) => line.includes(needle))) {
-        indexes.push(index);
-      }
-    }
-
-    return indexes;
-  }, [metadata, pathFilterCaseSensitive, pathFilterQuery, prettyLines]);
+    return new Set<number>(matchPlainResult.matchedLineIndexes);
+  }, [metadata, matchPlainResult]);
 
   const rowsByPath = useMemo(() => {
     const index = new Map<string, FlatJsonRow>();
@@ -133,11 +163,35 @@ export const useViewerContent = ({
     return index;
   }, [rows]);
 
+  const searchMetadata = useMemo<JSONViewerSearchMetadata>(() => {
+    return buildSearchMetadata({
+      metadata,
+      pathFilterQuery: normalizedPathFilterQuery,
+      searchQuery: normalizedSearchQuery,
+      searchMetadataLimit,
+      treeSearchResult: matchSearchResult,
+      plainSearchResult: matchPlainResult,
+      visibleCount: metadata ? filteredRows.length : filteredPrettyLineIndexes.length
+    });
+  }, [
+    metadata,
+    normalizedPathFilterQuery,
+    normalizedSearchQuery,
+    filteredPrettyLineIndexes.length,
+    filteredRows.length,
+    matchPlainResult,
+    searchMetadataLimit,
+    matchSearchResult
+  ]);
+
   return {
     filteredRows,
     rowsByPath,
     prettyLines,
     filteredPrettyLineIndexes,
-    filteredItemCount: metadata ? filteredRows.length : filteredPrettyLineIndexes.length
+    filteredItemCount: metadata ? filteredRows.length : filteredPrettyLineIndexes.length,
+    matchedPathSet,
+    matchedPrettyLineIndexSet,
+    searchMetadata
   };
 };

@@ -22,7 +22,20 @@ export { createPathSearchIndex, filterRowsByPathQuery } from "./core/filter";
 export type { PathFilterMode, PathSearchIndex } from "./core/filter";
 export { flattenJson } from "./core/flatten";
 export { parseJsonIncremental } from "./core/parser";
-export type { FlatJsonRow, JSONValue, JSONValueType } from "./core/types";
-export { defaultTheme, resolveTheme } from "./theme";
-export type { JsonTheme, JsonThemeOverride } from "./theme";
+export {
+    resolveSourceFormat,
+    sourceFormatFromFileName,
+    supportsTreeMetadata
+} from "./core/sourceFormat";
+export type { ResolvedSourceFormat, SourceFormat } from "./core/sourceFormat";
+export { parseSourceIncremental } from "./core/sourceParser";
+export type {
+    FlatJsonRow,
+    JSONValue,
+    JSONValueType,
+    JSONViewerSearchMetadata,
+    SearchMetadataMode
+} from "./core/types";
+export { defaultTheme, draculaTheme, monokaiTheme, nordTheme, oneDarkTheme, resolveTheme, solarizedDarkTheme, solarizedLightTheme, vscodeDarkTheme } from "./theme";
+export type { JsonTheme, JsonThemeOverride, VsCodeTheme } from "./theme";
 

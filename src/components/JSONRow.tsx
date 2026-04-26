@@ -5,6 +5,7 @@ import type { FlatJsonRow } from "../core/types";
 interface JSONRowProps {
   row: FlatJsonRow;
   isSelected: boolean;
+  isSearchMatch?: boolean;
   onToggle: (path: string) => void;
   onSelect: (path: string) => void;
   canToggle?: boolean;
@@ -45,11 +46,18 @@ const renderPrimitive = (row: FlatJsonRow): React.ReactNode => {
 export const JSONRow = React.memo(function JSONRow({
   row,
   isSelected,
+  isSearchMatch = false,
   onToggle,
   onSelect,
   canToggle = true
 }: JSONRowProps) {
-  const className = isSelected ? "rjv-row rjv-row-selected" : "rjv-row";
+  const className = [
+    "rjv-row",
+    isSearchMatch ? "rjv-row-match" : "",
+    isSelected ? "rjv-row-selected" : ""
+  ]
+    .filter(Boolean)
+    .join(" ");
   const showToggle = canToggle && row.isExpandable;
 
   return (

@@ -30,6 +30,10 @@
     outline-offset: -2px;
 }
 
+.rjv-row-match {
+    background: var(--rjv-row-match);
+}
+
 .rjv-row-selected {
     background: var(--rjv-row-selected);
 }
@@ -106,4 +110,8 @@
 
 .rjv-plain-line {
     white-space: pre;
+}
+
+.rjv-plain-line-match {
+    background: var(--rjv-plain-line-match);
 }

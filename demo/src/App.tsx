@@ -1,10 +1,21 @@
 import React, { useCallback, useMemo, useRef, useState } from "react";
 import {
     VirtualizeJSON,
+    draculaTheme,
+    monokaiTheme,
+    nordTheme,
+    oneDarkTheme,
+    solarizedDarkTheme,
+    solarizedLightTheme,
+    sourceFormatFromFileName,
+    vscodeDarkTheme,
     type FlatJsonRow,
+    type JSONViewerSearchMetadata,
     type JsonThemeOverride,
-    type PathFilterMode
+    type PathFilterMode,
+    type SourceFormat
 } from "react-json-virtualization";
+import { VirtualizeJSONModeDoc } from "./VirtualizeJSONModeDoc";
 
 const sampleSources = [
   {
@@ -22,6 +33,18 @@ const sampleSources = [
   {
     label: "Large 2M rows (text with spaces)",
     path: `${import.meta.env.BASE_URL}samples/large-2m-rows-with-spaces.json`
+  },
+  {
+    label: "Large Markdown notes (~1k lines)",
+    path: `${import.meta.env.BASE_URL}samples/markdown-ops-notes-1000.md`
+  },
+  {
+    label: "Large XML catalog (~1k lines)",
+    path: `${import.meta.env.BASE_URL}samples/xml-catalog-1000.xml`
+  },
+  {
+    label: "Large YAML config (~1k lines)",
+    path: `${import.meta.env.BASE_URL}samples/yaml-config-1000.yaml`
   }
 ] as const;
 
@@ -56,7 +79,24 @@ const themePresets: Array<{ name: string; value: JsonThemeOverride }> = [
       null: "#4e5f11",
       focusRing: "#2558d8"
     }
-  }
+  },
+  { name: "Monokai", value: monokaiTheme },
+  { name: "VS Code Dark+", value: vscodeDarkTheme },
+  { name: "Solarized Light", value: solarizedLightTheme },
+  { name: "Solarized Dark", value: solarizedDarkTheme },
+  { name: "Dracula", value: draculaTheme },
+  { name: "Nord", value: nordTheme },
+  { name: "One Dark", value: oneDarkTheme }
+];
+
+type SearchHighlightMode = "default" | "left-rail" | "outline" | "underline" | "none";
+
+const searchHighlightOptions: Array<{ label: string; value: SearchHighlightMode }> = [
+  { label: "Default fill", value: "default" },
+  { label: "Left rail", value: "left-rail" },
+  { label: "Dashed outline", value: "outline" },
+  { label: "Underline", value: "underline" },
+  { label: "None", value: "none" }
 ];
 
 async function readFileAsText(file: File): Promise<string> {
@@ -67,6 +107,9 @@ export function App(): React.ReactElement {
   const [viewerMode, setViewerMode] = useState<"collapsable" | "static">("collapsable");
   const [jsonText, setJsonText] = useState<string>("{}");
   const [activeSamplePath, setActiveSamplePath] = useState<string>(sampleSources[0].path);
+  const [sourceFormat, setSourceFormat] = useState<SourceFormat>(() =>
+    sourceFormatFromFileName(sampleSources[0].path)
+  );
   const [isLoadingSample, setIsLoadingSample] = useState(false);
   const [sourceLabel, setSourceLabel] = useState<string>("none");
 
@@ -80,6 +123,10 @@ export function App(): React.ReactElement {
   const [pathFilterQuery, setPathFilterQuery] = useState<string>("");
   const [pathFilterCaseSensitive, setPathFilterCaseSensitive] = useState<boolean>(false);
   const [pathFilterMode, setPathFilterMode] = useState<PathFilterMode>("auto");
+  const [searchQuery, setSearchQuery] = useState<string>("");
+  const [searchHighlightMode, setSearchHighlightMode] = useState<SearchHighlightMode>("default");
+  const [searchMetadataLimit, setSearchMetadataLimit] = useState<number>(500);
+  const [searchMetadata, setSearchMetadata] = useState<JSONViewerSearchMetadata | null>(null);
 
   const [isControlledExpansion, setIsControlledExpansion] = useState<boolean>(false);
   const [expandedPaths, setExpandedPaths] = useState<Set<string>>(new Set<string>());
@@ -99,6 +146,14 @@ export function App(): React.ReactElement {
   const selectedTheme = useMemo<JsonThemeOverride>(() => {
     return themePresets.find((preset) => preset.name === themePresetName)?.value ?? {};
   }, [themePresetName]);
+
+  const searchHighlightClassName = useMemo(() => {
+    if (searchHighlightMode === "default") {
+      return undefined;
+    }
+
+    return `demo-search-highlight-${searchHighlightMode}`;
+  }, [searchHighlightMode]);
 
   const resetInteractiveState = useCallback(() => {
     setParseError(null);
@@ -120,6 +175,7 @@ export function App(): React.ReactElement {
         const text = await response.text();
         setJsonText(text);
         setActiveSamplePath(path);
+        setSourceFormat(sourceFormatFromFileName(path));
         setSourceLabel(`sample: ${label}`);
         resetInteractiveState();
       } catch (error) {
@@ -137,6 +193,7 @@ export function App(): React.ReactElement {
       try {
         const text = await readFileAsText(file);
         setJsonText(text);
+        setSourceFormat(sourceFormatFromFileName(file.name));
         setSourceLabel(`file: ${file.name}`);
         resetInteractiveState();
       } catch (error) {
@@ -174,10 +231,12 @@ export function App(): React.ReactElement {
       <header className="demo-header">
         <h1>react-json-virtualization playground</h1>
         <p>
-          Drag and drop JSON, load repo samples, and test parsing, filtering, selection, expansion,
-          theming, and virtualization behavior in one place.
+          Drag and drop JSON, YAML, XML, or Markdown, load repo samples, and test parsing,
+          filtering, selection, expansion, theming, and virtualization behavior in one place.
         </p>
       </header>
+
+      <VirtualizeJSONModeDoc />
 
       <section className="panel controls-panel">
         <h2>Data Source</h2>
@@ -195,7 +254,7 @@ export function App(): React.ReactElement {
             }
           }}
         >
-          <strong>Drop a JSON file here</strong>
+          <strong>Drop a JSON, YAML, XML, or Markdown file here</strong>
           <span>or click to choose a local file</span>
         </div>
 
@@ -203,7 +262,7 @@ export function App(): React.ReactElement {
           ref={fileInputRef}
           className="file-input"
           type="file"
-          accept="application/json,.json"
+          accept="application/json,application/xml,text/xml,text/markdown,text/plain,text/yaml,application/x-yaml,.json,.xml,.yaml,.yml,.md,.markdown,.txt"
           onChange={async (event) => {
             const file = event.target.files?.item(0);
             if (file) {
@@ -347,6 +406,21 @@ export function App(): React.ReactElement {
           </label>
 
           <label>
+            Source format
+            <select
+              value={sourceFormat}
+              onChange={(event) => setSourceFormat(event.target.value as SourceFormat)}
+            >
+              <option value="auto">auto</option>
+              <option value="json">json</option>
+              <option value="yaml">yaml</option>
+              <option value="xml">xml</option>
+              <option value="markdown">markdown</option>
+              <option value="text">text</option>
+            </select>
+          </label>
+
+          <label>
             Theme preset
             <select
               value={themePresetName}
@@ -355,6 +429,20 @@ export function App(): React.ReactElement {
               {themePresets.map((preset) => (
                 <option key={preset.name} value={preset.name}>
                   {preset.name}
+                </option>
+              ))}
+            </select>
+          </label>
+
+          <label>
+            Search highlight style
+            <select
+              value={searchHighlightMode}
+              onChange={(event) => setSearchHighlightMode(event.target.value as SearchHighlightMode)}
+            >
+              {searchHighlightOptions.map((option) => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
                 </option>
               ))}
             </select>
@@ -369,6 +457,27 @@ export function App(): React.ReactElement {
               placeholder='e.g. zero hello, "new york" name, or $.users[1]'
               value={pathFilterQuery}
               onChange={(event) => setPathFilterQuery(event.target.value)}
+            />
+          </label>
+
+          <label>
+            Search query (highlights matches, no filtering)
+            <input
+              type="text"
+              placeholder='e.g. Ada active or "new york"'
+              value={searchQuery}
+              onChange={(event) => setSearchQuery(event.target.value)}
+            />
+          </label>
+
+          <label>
+            Search metadata limit
+            <input
+              type="number"
+              min={0}
+              max={2000}
+              value={searchMetadataLimit}
+              onChange={(event) => setSearchMetadataLimit(Number(event.target.value))}
             />
           </label>
         </div>
@@ -398,6 +507,8 @@ export function App(): React.ReactElement {
             onClick={() => {
               setSelectedPath("$");
               setPathFilterQuery("");
+              setSearchQuery("");
+              setSearchMetadata(null);
               setExpandedPaths(new Set<string>());
             }}
           >
@@ -412,9 +523,21 @@ export function App(): React.ReactElement {
           <li>Parse progress: {parseProgressLabel}</li>
           <li>Parse error: {hasViewerError ? parseError : "none"}</li>
           <li>Viewer mode: {viewerMode}</li>
+          <li>Source format hint: {sourceFormat}</li>
           <li>Metadata mode: {metadata ? "enabled" : "disabled"}</li>
           <li>Pretty line numbers: {metadata ? "n/a" : showLineNumbers ? "on" : "off"}</li>
           <li>Selected path: {selectedPath}</li>
+          <li>Search query: {searchQuery || "none"}</li>
+          <li>Search highlight style: {searchHighlightMode}</li>
+          <li>
+            Search matches: {
+              searchMetadata?.query
+                ? `${searchMetadata.matchCount} direct (${searchMetadata.visibleCount} visible)`
+                : "none"
+            }
+          </li>
+          <li>Search mode: {searchMetadata?.mode ?? "n/a"}</li>
+          <li>Search capped: {searchMetadata ? (searchMetadata.hasMore ? "yes" : "no") : "n/a"}</li>
           <li>
             Controlled expanded paths: {viewerMode === "collapsable" ? expandedPaths.size : "n/a (static)"}
           </li>
@@ -429,6 +552,7 @@ export function App(): React.ReactElement {
         {viewerMode === "collapsable" ? (
           <VirtualizeJSON.Collapsable
             json={jsonText}
+            sourceFormat={sourceFormat}
             metadata={metadata}
             showLineNumbers={showLineNumbers}
             height={height}
@@ -440,13 +564,19 @@ export function App(): React.ReactElement {
               setExpandedPaths(new Set<string>(nextPaths));
             }}
             pathFilterQuery={pathFilterQuery}
+            searchQuery={searchQuery}
             pathFilterCaseSensitive={pathFilterCaseSensitive}
             pathFilterMode={pathFilterMode}
+            searchMetadataLimit={searchMetadataLimit}
             theme={selectedTheme}
+            className={searchHighlightClassName}
             selectedPath={selectedPath}
             onNodeClick={(path, row) => {
               setSelectedPath(path);
               setLastClickedRow(row);
+            }}
+            onSearchMetadata={(metadataResult) => {
+              setSearchMetadata(metadataResult);
             }}
             onParseProgress={(processed, total) => {
               setParseProgress({ processed, total });
@@ -458,19 +588,26 @@ export function App(): React.ReactElement {
         ) : (
           <VirtualizeJSON.Static
             json={jsonText}
+            sourceFormat={sourceFormat}
             metadata={metadata}
             showLineNumbers={showLineNumbers}
             height={height}
             rowHeight={rowHeight}
             overscan={overscan}
             pathFilterQuery={pathFilterQuery}
+            searchQuery={searchQuery}
             pathFilterCaseSensitive={pathFilterCaseSensitive}
             pathFilterMode={pathFilterMode}
+            searchMetadataLimit={searchMetadataLimit}
             theme={selectedTheme}
+            className={searchHighlightClassName}
             selectedPath={selectedPath}
             onNodeClick={(path, row) => {
               setSelectedPath(path);
               setLastClickedRow(row);
+            }}
+            onSearchMetadata={(metadataResult) => {
+              setSearchMetadata(metadataResult);
             }}
             onParseProgress={(processed, total) => {
               setParseProgress({ processed, total });
