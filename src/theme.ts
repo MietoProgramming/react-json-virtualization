@@ -122,7 +122,7 @@ export const nordTheme: JsonTheme = {
 export const oneDarkTheme: JsonTheme = {
   background: "#282c34",
   rowHover: "#3e4351",
-  rowSelected: "##2b3a49", "rowMatch": "#61afef", "plainLineMatch": "#5c6370", key: "#61afef", "punctuation": "#abb2bf", string: "#98c379", number: "#d19a66", boolean: "#e06c75", null: "#5c6370", focusRing: "#3e4351"
+  rowSelected: "#2b3a49", rowMatch: "#61afef", plainLineMatch: "#5c6370", key: "#61afef", punctuation: "#abb2bf", string: "#98c379", number: "#d19a66", boolean: "#e06c75", null: "#5c6370", focusRing: "#3e4351"
 };
 
 export const vscodeDarkTheme: JsonTheme = {
@@ -141,8 +141,8 @@ export const vscodeDarkTheme: JsonTheme = {
 };
 
 export type VsCodeTheme = typeof vscodeDarkTheme | // Default VS Code Dark+
-typeof monokaiTheme // Monokai (built-in)
-;
+  typeof monokaiTheme // Monokai (built-in)
+  ;
 
 export type JsonThemeOverride = Partial<JsonTheme>;
 
