@@ -1,17 +1,19 @@
 import React, { useCallback, useMemo, useRef, useState } from "react";
 import {
-  VirtualizeJSON,
-  type FlatJsonRow,
-  type JSONViewerSearchMetadata,
-  type JsonThemeOverride,
-  type PathFilterMode,
-  monokaiTheme,
-  vscodeDarkTheme,
-  solarizedLightTheme,
-  solarizedDarkTheme,
-  draculaTheme,
-  nordTheme,
-  oneDarkTheme
+    VirtualizeJSON,
+    draculaTheme,
+    monokaiTheme,
+    nordTheme,
+    oneDarkTheme,
+    solarizedDarkTheme,
+    solarizedLightTheme,
+    sourceFormatFromFileName,
+    vscodeDarkTheme,
+    type FlatJsonRow,
+    type JSONViewerSearchMetadata,
+    type JsonThemeOverride,
+    type PathFilterMode,
+    type SourceFormat
 } from "react-json-virtualization";
 import { VirtualizeJSONModeDoc } from "./VirtualizeJSONModeDoc";
 
@@ -31,6 +33,18 @@ const sampleSources = [
   {
     label: "Large 2M rows (text with spaces)",
     path: `${import.meta.env.BASE_URL}samples/large-2m-rows-with-spaces.json`
+  },
+  {
+    label: "Large Markdown notes (~1k lines)",
+    path: `${import.meta.env.BASE_URL}samples/markdown-ops-notes-1000.md`
+  },
+  {
+    label: "Large XML catalog (~1k lines)",
+    path: `${import.meta.env.BASE_URL}samples/xml-catalog-1000.xml`
+  },
+  {
+    label: "Large YAML config (~1k lines)",
+    path: `${import.meta.env.BASE_URL}samples/yaml-config-1000.yaml`
   }
 ] as const;
 
@@ -93,6 +107,9 @@ export function App(): React.ReactElement {
   const [viewerMode, setViewerMode] = useState<"collapsable" | "static">("collapsable");
   const [jsonText, setJsonText] = useState<string>("{}");
   const [activeSamplePath, setActiveSamplePath] = useState<string>(sampleSources[0].path);
+  const [sourceFormat, setSourceFormat] = useState<SourceFormat>(() =>
+    sourceFormatFromFileName(sampleSources[0].path)
+  );
   const [isLoadingSample, setIsLoadingSample] = useState(false);
   const [sourceLabel, setSourceLabel] = useState<string>("none");
 
@@ -158,6 +175,7 @@ export function App(): React.ReactElement {
         const text = await response.text();
         setJsonText(text);
         setActiveSamplePath(path);
+        setSourceFormat(sourceFormatFromFileName(path));
         setSourceLabel(`sample: ${label}`);
         resetInteractiveState();
       } catch (error) {
@@ -175,6 +193,7 @@ export function App(): React.ReactElement {
       try {
         const text = await readFileAsText(file);
         setJsonText(text);
+        setSourceFormat(sourceFormatFromFileName(file.name));
         setSourceLabel(`file: ${file.name}`);
         resetInteractiveState();
       } catch (error) {
@@ -212,8 +231,8 @@ export function App(): React.ReactElement {
       <header className="demo-header">
         <h1>react-json-virtualization playground</h1>
         <p>
-          Drag and drop JSON, load repo samples, and test parsing, filtering, selection, expansion,
-          theming, and virtualization behavior in one place.
+          Drag and drop JSON, YAML, XML, or Markdown, load repo samples, and test parsing,
+          filtering, selection, expansion, theming, and virtualization behavior in one place.
         </p>
       </header>
 
@@ -235,7 +254,7 @@ export function App(): React.ReactElement {
             }
           }}
         >
-          <strong>Drop a JSON file here</strong>
+          <strong>Drop a JSON, YAML, XML, or Markdown file here</strong>
           <span>or click to choose a local file</span>
         </div>
 
@@ -243,7 +262,7 @@ export function App(): React.ReactElement {
           ref={fileInputRef}
           className="file-input"
           type="file"
-          accept="application/json,.json"
+          accept="application/json,application/xml,text/xml,text/markdown,text/plain,text/yaml,application/x-yaml,.json,.xml,.yaml,.yml,.md,.markdown,.txt"
           onChange={async (event) => {
             const file = event.target.files?.item(0);
             if (file) {
@@ -387,6 +406,21 @@ export function App(): React.ReactElement {
           </label>
 
           <label>
+            Source format
+            <select
+              value={sourceFormat}
+              onChange={(event) => setSourceFormat(event.target.value as SourceFormat)}
+            >
+              <option value="auto">auto</option>
+              <option value="json">json</option>
+              <option value="yaml">yaml</option>
+              <option value="xml">xml</option>
+              <option value="markdown">markdown</option>
+              <option value="text">text</option>
+            </select>
+          </label>
+
+          <label>
             Theme preset
             <select
               value={themePresetName}
@@ -489,6 +523,7 @@ export function App(): React.ReactElement {
           <li>Parse progress: {parseProgressLabel}</li>
           <li>Parse error: {hasViewerError ? parseError : "none"}</li>
           <li>Viewer mode: {viewerMode}</li>
+          <li>Source format hint: {sourceFormat}</li>
           <li>Metadata mode: {metadata ? "enabled" : "disabled"}</li>
           <li>Pretty line numbers: {metadata ? "n/a" : showLineNumbers ? "on" : "off"}</li>
           <li>Selected path: {selectedPath}</li>
@@ -517,6 +552,7 @@ export function App(): React.ReactElement {
         {viewerMode === "collapsable" ? (
           <VirtualizeJSON.Collapsable
             json={jsonText}
+            sourceFormat={sourceFormat}
             metadata={metadata}
             showLineNumbers={showLineNumbers}
             height={height}
@@ -552,6 +588,7 @@ export function App(): React.ReactElement {
         ) : (
           <VirtualizeJSON.Static
             json={jsonText}
+            sourceFormat={sourceFormat}
             metadata={metadata}
             showLineNumbers={showLineNumbers}
             height={height}

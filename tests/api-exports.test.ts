@@ -7,6 +7,13 @@ describe("public API exports", () => {
     expect(typeof api.VirtualizeJSON.Static).toBe("function");
   });
 
+  it("exports source format helpers", () => {
+    expect(typeof api.parseSourceIncremental).toBe("function");
+    expect(typeof api.resolveSourceFormat).toBe("function");
+    expect(typeof api.sourceFormatFromFileName).toBe("function");
+    expect(typeof api.supportsTreeMetadata).toBe("function");
+  });
+
   it("does not export legacy JSONViewer component", () => {
     expect("JSONViewer" in api).toBe(false);
   });

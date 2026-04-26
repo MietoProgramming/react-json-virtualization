@@ -6,6 +6,8 @@ Virtualized React JSON viewer for large JSON strings with token-based color them
 
 - Incremental async JSON parsing on the main thread
 - Virtualized tree rendering for large nested structures
+- JSON-only metadata/tree mode
+- Plain virtualized text mode for non-JSON text-like formats (for example Markdown, XML, YAML, TXT)
 - Expand/collapse nodes with keyboard support
 - Path and primitive-value search over JSON paths
 - Dedicated `searchQuery` support with AND-combination against `pathFilterQuery`
@@ -113,7 +115,8 @@ export function StaticExample({ json }: { json: string }) {
 ### VirtualizeJSON.Collapsable props
 
 - `json: string` Raw JSON string input.
-- `metadata?: boolean` Enables tree metadata mode (Object/Array counts, expansion, filtering, virtualization). Default `true`. When `false`, renders a virtualized pretty-printed JSON view.
+- `sourceFormat?: "auto" | "json" | "yaml" | "xml" | "markdown" | "text"` Input format hint. Default `"auto"`, which infers by content. All non-JSON formats render in plain virtualized mode.
+- `metadata?: boolean` Enables tree metadata mode (Object/Array counts, expansion, filtering, virtualization). Default `true`. Tree metadata is available only for `json`. All non-JSON formats render a virtualized plain-text view.
 - `showLineNumbers?: boolean` Shows line numbers in the virtualized pretty-printed JSON view (`metadata=false`). Default `true`.
 - `height?: number | string` Container height. Default `520`.
 - `rowHeight?: number` Fixed row height used by virtualization. Default `24`.

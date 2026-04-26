@@ -1,10 +1,12 @@
 import { useEffect, useRef, useState } from "react";
 import { createExpandedPathSet, expandedPathsFromDepth } from "../../core/expansion";
-import { parseJsonIncremental } from "../../core/parser";
+import type { SourceFormat } from "../../core/sourceFormat";
+import { parseSourceIncremental } from "../../core/sourceParser";
 import type { JSONValue } from "../../core/types";
 
 interface UseParsedJsonStateParams {
   json: string;
+  sourceFormat: SourceFormat;
   metadata: boolean;
   alwaysExpanded: boolean;
   initialExpandDepth: number;
@@ -25,6 +27,7 @@ interface ParsedJsonState {
 
 export const useParsedJsonState = ({
   json,
+  sourceFormat,
   metadata,
   alwaysExpanded,
   initialExpandDepth,
@@ -51,6 +54,7 @@ export const useParsedJsonState = ({
 
   useEffect(() => {
     if (!metadata) {
+      setRoot(null);
       setIsParsing(false);
       setError(null);
       return;
@@ -64,7 +68,7 @@ export const useParsedJsonState = ({
       setError(null);
 
       try {
-        const parsed = await parseJsonIncremental(json, {
+        const parsedSource = await parseSourceIncremental(json, sourceFormat, {
           signal: controller.signal,
           onProgress: (processedChars, totalChars) => {
             onParseProgressRef.current?.(processedChars, totalChars);
@@ -75,14 +79,18 @@ export const useParsedJsonState = ({
           return;
         }
 
-        setRoot(parsed);
+        if (parsedSource.root === null) {
+          throw new Error(`Metadata mode is not available for ${parsedSource.format} sources`);
+        }
+
+        setRoot(parsedSource.root);
 
         const nextExpanded =
           alwaysExpanded
-            ? expandedPathsFromDepth(parsed, Number.POSITIVE_INFINITY)
+            ? expandedPathsFromDepth(parsedSource.root, Number.POSITIVE_INFINITY)
             : defaultExpandedPaths === undefined
-            ? expandedPathsFromDepth(parsed, initialExpandDepth)
-            : createExpandedPathSet(defaultExpandedPaths);
+              ? expandedPathsFromDepth(parsedSource.root, initialExpandDepth)
+              : createExpandedPathSet(defaultExpandedPaths);
 
         if (!isExpandedControlled) {
           setInternalExpandedPaths(nextExpanded);
@@ -97,7 +105,7 @@ export const useParsedJsonState = ({
         const normalized =
           candidateError instanceof Error
             ? candidateError
-            : new Error("Unknown JSON parse error");
+            : new Error("Unknown source parse error");
 
         setError(normalized.message);
         onParseErrorRef.current?.(normalized);
@@ -120,6 +128,7 @@ export const useParsedJsonState = ({
     initialExpandDepth,
     isExpandedControlled,
     json,
+    sourceFormat,
     metadata
   ]);
 

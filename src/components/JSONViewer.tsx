@@ -1,6 +1,7 @@
 import React, { useMemo, useState } from "react";
 import { createExpandedPathSet, expandedPathsFromDepth } from "../core/expansion";
 import { type PathFilterMode } from "../core/filter";
+import { resolveSourceFormat, supportsTreeMetadata, type SourceFormat } from "../core/sourceFormat";
 import type { FlatJsonRow, JSONViewerSearchMetadata } from "../core/types";
 import { useVirtualization } from "../hooks/useVirtualization";
 import { resolveTheme, type JsonThemeOverride } from "../theme";
@@ -15,6 +16,7 @@ import { createViewerStyle } from "./jsonViewer/viewerStyle";
 
 export interface JSONViewerProps {
   json: string;
+  sourceFormat?: SourceFormat;
   metadata?: boolean;
   showLineNumbers?: boolean;
   height?: number | string;
@@ -41,6 +43,7 @@ export interface JSONViewerProps {
 
 export function JSONViewer({
   json,
+  sourceFormat = "auto",
   metadata = true,
   showLineNumbers = true,
   height = 520,
@@ -64,10 +67,13 @@ export function JSONViewer({
   onParseError,
   onSearchMetadata
 }: JSONViewerProps): React.ReactElement {
+  const resolvedSourceFormat = useMemo(() => resolveSourceFormat(json, sourceFormat), [json, sourceFormat]);
+  const usesMetadataTree = metadata && supportsTreeMetadata(resolvedSourceFormat);
   const isExpandedControlled = expandedPaths !== undefined;
   const { root, error, isParsing, internalExpandedPaths, setInternalExpandedPaths } = useParsedJsonState({
     json,
-    metadata,
+    sourceFormat: resolvedSourceFormat,
+    metadata: usesMetadataTree,
     alwaysExpanded,
     initialExpandDepth,
     defaultExpandedPaths,
@@ -77,25 +83,22 @@ export function JSONViewer({
     onExpandedPathsChange
   });
   const [internalSelectedPath, setInternalSelectedPath] = useState<string>("$");
-
   const fullyExpandedPaths = useMemo(() => {
-    if (!metadata || root === null) {
+    if (!usesMetadataTree || root === null) {
       return createExpandedPathSet();
     }
     return expandedPathsFromDepth(root, Number.POSITIVE_INFINITY);
-  }, [metadata, root]);
-
+  }, [root, usesMetadataTree]);
   const activeExpandedPaths = useMemo(
     () =>
-      !metadata
+      !usesMetadataTree
         ? createExpandedPathSet()
         :
       alwaysExpanded
         ? fullyExpandedPaths
         : createExpandedPathSet(expandedPaths ?? internalExpandedPaths),
-    [alwaysExpanded, expandedPaths, fullyExpandedPaths, internalExpandedPaths, metadata]
+    [alwaysExpanded, expandedPaths, fullyExpandedPaths, internalExpandedPaths, usesMetadataTree]
   );
-
   const {
     filteredRows,
     rowsByPath,
@@ -106,7 +109,7 @@ export function JSONViewer({
     matchedPrettyLineIndexSet,
     searchMetadata
   } = useViewerContent({
-    metadata,
+    metadata: usesMetadataTree,
     json,
     root,
     activeExpandedPaths,
@@ -117,26 +120,14 @@ export function JSONViewer({
     searchMetadataLimit
   });
   useSearchMetadataCallback(onSearchMetadata, searchMetadata);
-
-  const {
-    containerRef,
-    onScroll,
-    startIndex,
-    endIndex,
-    topSpacerHeight,
-    bottomSpacerHeight
-  } = useVirtualization({
+  const { containerRef, onScroll, startIndex, endIndex, topSpacerHeight, bottomSpacerHeight } = useVirtualization({
     rowCount: filteredItemCount,
     rowHeight,
     overscan
   });
   const virtualizedRows = filteredRows.slice(startIndex, endIndex);
-  const {
-    visiblePrettyLines,
-    visiblePrettyLineNumbers,
-    visiblePrettyLineIndexes
-  } = useVirtualizedPrettyContent({
-    metadata,
+  const { visiblePrettyLines, visiblePrettyLineNumbers, visiblePrettyLineIndexes } = useVirtualizedPrettyContent({
+    metadata: usesMetadataTree,
     showLineNumbers,
     startIndex,
     endIndex,
@@ -155,10 +146,8 @@ export function JSONViewer({
     onNodeClick
   });
   const style = createViewerStyle(height, resolveTheme(theme));
-
   const rootClassName = className ? `rjv-container ${className}` : "rjv-container";
-  const rootRole = metadata ? "tree" : "region";
-
+  const rootRole = usesMetadataTree ? "tree" : "region";
   return (
     <div
       className={rootClassName}
@@ -167,10 +156,10 @@ export function JSONViewer({
       role={rootRole}
       style={style}
     >
-      {isParsing && <div className="rjv-status">Parsing JSON...</div>}
+      {isParsing && <div className="rjv-status">Parsing {resolvedSourceFormat.toUpperCase()}...</div>}
       {!isParsing && error && <div className="rjv-status rjv-status-error">{error}</div>}
       {!isParsing && !error && (
-        metadata ? (
+        usesMetadataTree ? (
           <JSONViewerTreeContent
             topSpacerHeight={topSpacerHeight}
             bottomSpacerHeight={bottomSpacerHeight}
