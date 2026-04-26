@@ -4,7 +4,14 @@ import {
   type FlatJsonRow,
   type JSONViewerSearchMetadata,
   type JsonThemeOverride,
-  type PathFilterMode
+  type PathFilterMode,
+  monokaiTheme,
+  vscodeDarkTheme,
+  solarizedLightTheme,
+  solarizedDarkTheme,
+  draculaTheme,
+  nordTheme,
+  oneDarkTheme
 } from "react-json-virtualization";
 import { VirtualizeJSONModeDoc } from "./VirtualizeJSONModeDoc";
 
@@ -58,7 +65,14 @@ const themePresets: Array<{ name: string; value: JsonThemeOverride }> = [
       null: "#4e5f11",
       focusRing: "#2558d8"
     }
-  }
+  },
+  { name: "Monokai", value: monokaiTheme },
+  { name: "VS Code Dark+", value: vscodeDarkTheme },
+  { name: "Solarized Light", value: solarizedLightTheme },
+  { name: "Solarized Dark", value: solarizedDarkTheme },
+  { name: "Dracula", value: draculaTheme },
+  { name: "Nord", value: nordTheme },
+  { name: "One Dark", value: oneDarkTheme }
 ];
 
 type SearchHighlightMode = "default" | "left-rail" | "outline" | "underline" | "none";

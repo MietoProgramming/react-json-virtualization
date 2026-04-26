@@ -29,6 +29,6 @@ export type {
     JSONViewerSearchMetadata,
     SearchMetadataMode
 } from "./core/types";
-export { defaultTheme, resolveTheme } from "./theme";
-export type { JsonTheme, JsonThemeOverride } from "./theme";
+export { defaultTheme, resolveTheme, monokaiTheme, vscodeDarkTheme, solarizedLightTheme, solarizedDarkTheme, draculaTheme, nordTheme, oneDarkTheme } from "./theme";
+export type { JsonTheme, JsonThemeOverride, VsCodeTheme } from "./theme";
 
