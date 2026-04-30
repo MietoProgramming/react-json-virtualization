@@ -145,8 +145,36 @@ export const useViewerContent = ({
       return undefined;
     }
 
-    return searchPrettyLinesByQueries(prettyLines, searchQueryParts, pathFilterCaseSensitive);
-  }, [metadata, pathFilterCaseSensitive, prettyLines, searchQueryParts]);
+    if (filteredPrettyLineIndexes.length === 0) {
+      return { filteredLineIndexes: [], matchedLineIndexes: [] };
+    }
+
+    if (filterQueryParts.length === 0) {
+      return searchPrettyLinesByQueries(prettyLines, searchQueryParts, pathFilterCaseSensitive);
+    }
+
+    const filteredLines = filteredPrettyLineIndexes.map((lineIndex) => prettyLines[lineIndex]);
+    const filteredSearch = searchPrettyLinesByQueries(
+      filteredLines,
+      searchQueryParts,
+      pathFilterCaseSensitive
+    );
+    const mappedMatches = filteredSearch.matchedLineIndexes.map(
+      (filteredIndex) => filteredPrettyLineIndexes[filteredIndex]
+    );
+
+    return {
+      filteredLineIndexes: mappedMatches,
+      matchedLineIndexes: mappedMatches
+    };
+  }, [
+    metadata,
+    searchQueryParts,
+    filteredPrettyLineIndexes,
+    filterQueryParts,
+    prettyLines,
+    pathFilterCaseSensitive
+  ]);
   const matchedPrettyLineIndexSet = useMemo(() => {
     if (metadata || !matchPlainResult || matchPlainResult.matchedLineIndexes.length === 0) {
       return EMPTY_MATCHED_PRETTY_LINE_INDEXES;

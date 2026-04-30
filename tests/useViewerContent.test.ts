@@ -2,8 +2,8 @@ import React from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 import {
-    canUsePrefixPathSearchIndex,
-    useViewerContent
+  canUsePrefixPathSearchIndex,
+  useViewerContent
 } from "../src/components/jsonViewer/useViewerContent";
 import type { JSONValue } from "../src/core/types";
 
@@ -139,7 +139,7 @@ describe("useViewerContent", () => {
       metadata: true,
       json: JSON.stringify(root),
       root,
-      activeExpandedPaths: new Set(["$", "$.users", "$.users[0]", "$.users[1]", "$.users[2]" ]),
+      activeExpandedPaths: new Set(["$", "$.users", "$.users[0]", "$.users[1]", "$.users[2]"]),
       pathFilterQuery: "name",
       searchQuery: "Ada",
       pathFilterCaseSensitive: false,
@@ -219,6 +219,31 @@ describe("useViewerContent", () => {
     expect(result.searchMetadata.visibleCount).toBe(4);
     expect(result.searchMetadata.matchedLineNumbers).toEqual([2]);
     expect(result.searchMetadata.matchedRowIds).toEqual(["line:2"]);
+  });
+
+  it("searches within filtered pretty lines", () => {
+    const json = `{
+  "alpha": "one",
+  "beta": "two",
+  "gamma": "one"
+}`;
+
+    const result = runUseViewerContent({
+      metadata: false,
+      json,
+      root: null,
+      activeExpandedPaths: new Set<string>(),
+      pathFilterQuery: "beta",
+      searchQuery: "one",
+      pathFilterCaseSensitive: false,
+      pathFilterMode: "auto"
+    });
+
+    expect(result.filteredPrettyLineIndexes).toEqual([2]);
+    expect(result.matchedPrettyLineIndexSet.size).toBe(0);
+    expect(result.searchMetadata.matchCount).toBe(0);
+    expect(result.searchMetadata.visibleCount).toBe(1);
+    expect(result.searchMetadata.matchedLineNumbers).toEqual([]);
   });
 
   it("keeps filter rows and highlights only matching row for search", () => {
