@@ -99,6 +99,49 @@ const searchHighlightOptions: Array<{ label: string; value: SearchHighlightMode 
   { label: "None", value: "none" }
 ];
 
+type DemoScenario = {
+  id: string;
+  label: string;
+  description: string;
+  json: string;
+  pathFilterQuery: string;
+  searchQuery: string;
+  metadata: boolean;
+  showLineNumbers: boolean;
+  sourceFormat: SourceFormat;
+};
+
+const filterSearchScenarioJson = `{
+  "alpha": "one",
+  "beta": "two",
+  "gamma": "one"
+}`;
+
+const demoScenarios: DemoScenario[] = [
+  {
+    id: "plain-filter-search-miss",
+    label: "Plain: filter beta + search one",
+    description: "Expect 0 matches in Live State.",
+    json: filterSearchScenarioJson,
+    pathFilterQuery: "beta",
+    searchQuery: "one",
+    metadata: false,
+    showLineNumbers: true,
+    sourceFormat: "json"
+  },
+  {
+    id: "plain-filter-search-hit",
+    label: "Plain: filter alpha gamma + search one",
+    description: "Expect 2 matches in Live State.",
+    json: filterSearchScenarioJson,
+    pathFilterQuery: "alpha gamma",
+    searchQuery: "one",
+    metadata: false,
+    showLineNumbers: true,
+    sourceFormat: "json"
+  }
+];
+
 async function readFileAsText(file: File): Promise<string> {
   return await file.text();
 }
@@ -162,6 +205,23 @@ export function App(): React.ReactElement {
     setLastClickedRow(null);
     setExpandedPaths(new Set<string>());
   }, []);
+
+  const applyScenario = useCallback(
+    (scenario: DemoScenario) => {
+      resetInteractiveState();
+      setJsonText(scenario.json);
+      setSourceFormat(scenario.sourceFormat);
+      setSourceLabel(`scenario: ${scenario.label}`);
+      setMetadata(scenario.metadata);
+      setShowLineNumbers(scenario.showLineNumbers);
+      setPathFilterQuery(scenario.pathFilterQuery);
+      setSearchQuery(scenario.searchQuery);
+      setPathFilterCaseSensitive(false);
+      setPathFilterMode("auto");
+      setSearchMetadata(null);
+    },
+    [resetInteractiveState]
+  );
 
   const loadSample = useCallback(
     async (path: string, label: string) => {
@@ -304,6 +364,27 @@ export function App(): React.ReactElement {
         </div>
 
         <p className="muted">Active source: {sourceLabel}</p>
+      </section>
+
+      <section className="panel controls-panel">
+        <h2>Search + Filter Scenarios</h2>
+        <p className="muted">
+          Quick presets for validating that search matches are limited to filtered lines in plain
+          mode.
+        </p>
+        <div className="scenario-grid">
+          {demoScenarios.map((scenario) => (
+            <button
+              key={scenario.id}
+              type="button"
+              className="scenario-card"
+              onClick={() => applyScenario(scenario)}
+            >
+              <strong>{scenario.label}</strong>
+              <span>{scenario.description}</span>
+            </button>
+          ))}
+        </div>
       </section>
 
       <section className="panel controls-panel">
