@@ -12,6 +12,7 @@ Virtualized React JSON viewer for large JSON strings with token-based color them
 - Path and primitive-value search over JSON paths
 - Dedicated `searchQuery` support with AND-combination against `pathFilterQuery`
 - Direct-match highlighting for tree rows and pretty-printed lines
+- Active match navigation via `activeMatchIndex` for external search UI
 - Trie-indexed prefix path search for low-latency filtering on large trees
 - Controlled and uncontrolled expansion state
 - Token-based color theme overrides (keys, values, punctuation)
@@ -110,6 +111,63 @@ export function StaticExample({ json }: { json: string }) {
 }
 ```
 
+Search navigation (Ctrl+F-style UI managed by the host app):
+
+```tsx
+import { useState } from "react";
+import { VirtualizeJSON, type JSONViewerSearchMetadata } from "react-json-virtualization";
+
+export function SearchableViewer({ json }: { json: string }) {
+  const [searchQuery, setSearchQuery] = useState("");
+  const [activeMatchIndex, setActiveMatchIndex] = useState<number | null>(null);
+  const [searchMetadata, setSearchMetadata] = useState<JSONViewerSearchMetadata | null>(null);
+
+  const availableMatches = searchMetadata?.matchedRowIds.length ?? 0;
+  const hasMore = searchMetadata?.hasMore ?? false;
+
+  const goNext = (): void => {
+    if (availableMatches === 0) {
+      return;
+    }
+
+    setActiveMatchIndex((current) => {
+      const next = current === null ? 0 : (current + 1) % availableMatches;
+      return next;
+    });
+  };
+
+  const goPrev = (): void => {
+    if (availableMatches === 0) {
+      return;
+    }
+
+    setActiveMatchIndex((current) => {
+      const next = current === null ? availableMatches - 1 : (current - 1 + availableMatches) % availableMatches;
+      return next;
+    });
+  };
+
+  return (
+    <div>
+      <div>
+        <input value={searchQuery} onChange={(event) => setSearchQuery(event.target.value)} />
+        <button type="button" onClick={goPrev}>Prev</button>
+        <button type="button" onClick={goNext}>Next</button>
+        <span>
+          {availableMatches === 0 ? "0" : `${(activeMatchIndex ?? 0) + 1} / ${availableMatches}${hasMore ? "+" : ""}`}
+        </span>
+      </div>
+      <VirtualizeJSON.Collapsable
+        json={json}
+        searchQuery={searchQuery}
+        activeMatchIndex={activeMatchIndex}
+        onSearchMetadata={setSearchMetadata}
+      />
+    </div>
+  );
+}
+```
+
 ## API
 
 ### VirtualizeJSON.Collapsable props
@@ -127,6 +185,7 @@ export function StaticExample({ json }: { json: string }) {
 - `onExpandedPathsChange?: (paths) => void` Expansion state callback.
 - `pathFilterQuery?: string` Filters by JSON path and all JSON value types (`string`, `number`, `boolean`, `null`, `object`, `array`). Unquoted terms are split by whitespace and matched with OR semantics (`zero hello` matches either term). Wrap exact phrases in quotes (for example `"new york" name`). Quoted single terms are treated the same as unquoted terms. In `metadata=false`, it filters pretty-printed lines.
 - `searchQuery?: string` Highlights matches without filtering rows or lines. Uses the same tokenization and term matching rules as `pathFilterQuery`.
+- `activeMatchIndex?: number | null` 0-based index into the current `matchedPaths` (tree) or `matchedLineNumbers` (plain) list from `onSearchMetadata`. The viewer scrolls to the active match and applies an active-match highlight. In tree mode, the viewer also updates internal selection when `selectedPath` is uncontrolled.
 - `pathFilterCaseSensitive?: boolean` Case-sensitive path filter mode.
 - `pathFilterMode?: "auto" | "prefix" | "includes"` Filter strategy. Defaults to `auto`.
 - `searchMetadataLimit?: number` Maximum identifiers returned in search metadata arrays. Default `500`.
@@ -146,6 +205,8 @@ export function StaticExample({ json }: { json: string }) {
 - `visibleCount` (rows or lines currently visible after context inclusion)
 - `matchedPaths`, `matchedRowIds`, `matchedLineNumbers` (all capped by `searchMetadataLimit`)
 - `hasMore` (`true` when any metadata list was truncated)
+
+When `hasMore` is true, `matchCount` can exceed the length of `matchedPaths` or `matchedLineNumbers`. Use `searchMetadataLimit` to raise the cap if you need to navigate every match.
 
 ### VirtualizeJSON.Static props
 

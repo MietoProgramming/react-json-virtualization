@@ -1,5 +1,5 @@
 import type { RefObject, UIEvent } from "react";
-import { useLayoutEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useLayoutEffect, useMemo, useRef, useState } from "react";
 
 export interface UseVirtualizationOptions {
   rowCount: number;
@@ -14,6 +14,7 @@ export interface UseVirtualizationResult {
   endIndex: number;
   topSpacerHeight: number;
   bottomSpacerHeight: number;
+  scrollToIndex: (index: number, align?: "start" | "center" | "end") => void;
 }
 
 interface VirtualMetricsInput {
@@ -131,9 +132,40 @@ export function useVirtualization({
     setScrollTop(event.currentTarget.scrollTop);
   };
 
+  const scrollToIndex = useCallback((
+    index: number,
+    align: "start" | "center" | "end" = "center"
+  ): void => {
+    const element = containerRef.current;
+    if (!element || rowCount === 0) {
+      return;
+    }
+
+    const clampedIndex = Math.min(Math.max(index, 0), Math.max(0, rowCount - 1));
+    const maxScrollTop = Math.max(0, element.scrollHeight - element.clientHeight);
+    let nextScrollTop = 0;
+
+    if (align === "start") {
+      nextScrollTop = clampedIndex * rowHeight;
+    } else if (align === "end") {
+      nextScrollTop = (clampedIndex + 1) * rowHeight - element.clientHeight;
+    } else {
+      nextScrollTop = clampedIndex * rowHeight - (element.clientHeight / 2 - rowHeight / 2);
+    }
+
+    const clampedScrollTop = clampScrollTop(nextScrollTop, maxScrollTop);
+    if (element.scrollTop === clampedScrollTop) {
+      return;
+    }
+
+    element.scrollTop = clampedScrollTop;
+    setScrollTop(clampedScrollTop);
+  }, [rowCount, rowHeight]);
+
   return {
     containerRef,
     onScroll,
-    ...metrics
+    ...metrics,
+    scrollToIndex
   };
 }

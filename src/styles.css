@@ -34,6 +34,10 @@
     background: var(--rjv-row-match);
 }
 
+.rjv-row-active-match {
+    box-shadow: inset 0 0 0 2px var(--rjv-focus-ring);
+}
+
 .rjv-row-selected {
     background: var(--rjv-row-selected);
 }
@@ -114,4 +118,8 @@
 
 .rjv-plain-line-match {
     background: var(--rjv-plain-line-match);
+}
+
+.rjv-plain-line-active-match {
+    box-shadow: inset 0 0 0 2px var(--rjv-focus-ring);
 }
