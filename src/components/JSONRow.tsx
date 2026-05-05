@@ -6,6 +6,7 @@ interface JSONRowProps {
   row: FlatJsonRow;
   isSelected: boolean;
   isSearchMatch?: boolean;
+  isActiveMatch?: boolean;
   onToggle: (path: string) => void;
   onSelect: (path: string) => void;
   canToggle?: boolean;
@@ -47,6 +48,7 @@ export const JSONRow = React.memo(function JSONRow({
   row,
   isSelected,
   isSearchMatch = false,
+  isActiveMatch = false,
   onToggle,
   onSelect,
   canToggle = true
@@ -54,6 +56,7 @@ export const JSONRow = React.memo(function JSONRow({
   const className = [
     "rjv-row",
     isSearchMatch ? "rjv-row-match" : "",
+    isActiveMatch ? "rjv-row-active-match" : "",
     isSelected ? "rjv-row-selected" : ""
   ]
     .filter(Boolean)

@@ -11,6 +11,7 @@ interface JSONViewerPlainContentProps {
   visiblePrettyLineIndexes: number[];
   visiblePrettyLineNumbers: string;
   matchedPrettyLineIndexes: ReadonlySet<number>;
+  activeMatchLineIndex: number | null;
 }
 
 export function JSONViewerPlainContent({
@@ -22,7 +23,8 @@ export function JSONViewerPlainContent({
   visiblePrettyLines,
   visiblePrettyLineIndexes,
   visiblePrettyLineNumbers,
-  matchedPrettyLineIndexes
+  matchedPrettyLineIndexes,
+  activeMatchLineIndex
 }: JSONViewerPlainContentProps): React.ReactElement {
   return (
     <>
@@ -37,22 +39,28 @@ export function JSONViewerPlainContent({
           {visiblePrettyLines.length === 0 ? (
             <div className="rjv-plain-line">&nbsp;</div>
           ) : (
-            visiblePrettyLines.map((line, lineOffset) => (
-              <div
-                className={
-                  matchedPrettyLineIndexes.has(visiblePrettyLineIndexes[lineOffset])
-                    ? "rjv-plain-line rjv-plain-line-match"
-                    : "rjv-plain-line"
-                }
-                key={startIndex + lineOffset}
-              >
+            visiblePrettyLines.map((line, lineOffset) => {
+              const lineIndex = visiblePrettyLineIndexes[lineOffset];
+              const isMatch = matchedPrettyLineIndexes.has(lineIndex);
+              const isActive = activeMatchLineIndex === lineIndex;
+              const className = [
+                "rjv-plain-line",
+                isMatch ? "rjv-plain-line-match" : "",
+                isActive ? "rjv-plain-line-active-match" : ""
+              ]
+                .filter(Boolean)
+                .join(" ");
+
+              return (
+                <div className={className} key={startIndex + lineOffset}>
                 {tokenizePrettyLine(line).map((token, tokenIndex) => (
                   <span key={`${startIndex + lineOffset}-${tokenIndex}`} className={token.className}>
                     {token.text || " "}
                   </span>
                 ))}
-              </div>
-            ))
+                </div>
+              );
+            })
           )}
         </div>
       </div>

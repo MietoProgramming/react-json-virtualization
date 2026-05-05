@@ -1,4 +1,4 @@
-import React, { useCallback, useMemo, useRef, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
     VirtualizeJSON,
     draculaTheme,
@@ -170,6 +170,7 @@ export function App(): React.ReactElement {
   const [searchHighlightMode, setSearchHighlightMode] = useState<SearchHighlightMode>("default");
   const [searchMetadataLimit, setSearchMetadataLimit] = useState<number>(500);
   const [searchMetadata, setSearchMetadata] = useState<JSONViewerSearchMetadata | null>(null);
+  const [activeMatchIndex, setActiveMatchIndex] = useState<number | null>(null);
 
   const [isControlledExpansion, setIsControlledExpansion] = useState<boolean>(false);
   const [expandedPaths, setExpandedPaths] = useState<Set<string>>(new Set<string>());
@@ -204,6 +205,7 @@ export function App(): React.ReactElement {
     setSelectedPath("$");
     setLastClickedRow(null);
     setExpandedPaths(new Set<string>());
+    setActiveMatchIndex(null);
   }, []);
 
   const applyScenario = useCallback(
@@ -285,6 +287,56 @@ export function App(): React.ReactElement {
   }, [parseProgress]);
 
   const hasViewerError = parseError !== null;
+  const availableMatches = searchMetadata?.matchedRowIds.length ?? 0;
+  const hasSearchQuery = Boolean(searchMetadata?.query);
+  const matchCounterLabel = !hasSearchQuery
+    ? "n/a"
+    : availableMatches === 0
+      ? "0"
+      : `${(activeMatchIndex ?? 0) + 1} / ${availableMatches}${searchMetadata?.hasMore ? "+" : ""}`;
+
+  const goToNextMatch = useCallback(() => {
+    if (availableMatches === 0) {
+      return;
+    }
+
+    setActiveMatchIndex((current) => {
+      const next = current === null ? 0 : (current + 1) % availableMatches;
+      return next;
+    });
+  }, [availableMatches]);
+
+  const goToPreviousMatch = useCallback(() => {
+    if (availableMatches === 0) {
+      return;
+    }
+
+    setActiveMatchIndex((current) => {
+      const next = current === null
+        ? availableMatches - 1
+        : (current - 1 + availableMatches) % availableMatches;
+      return next;
+    });
+  }, [availableMatches]);
+
+  useEffect(() => {
+    if (!searchMetadata?.query) {
+      setActiveMatchIndex(null);
+      return;
+    }
+
+    if (availableMatches === 0) {
+      setActiveMatchIndex(null);
+      return;
+    }
+
+    setActiveMatchIndex((current) => {
+      if (current === null || current < 0 || current >= availableMatches) {
+        return 0;
+      }
+      return current;
+    });
+  }, [availableMatches, searchMetadata?.query]);
 
   return (
     <main className="demo-shell">
@@ -548,6 +600,17 @@ export function App(): React.ReactElement {
               placeholder='e.g. Ada active or "new york"'
               value={searchQuery}
               onChange={(event) => setSearchQuery(event.target.value)}
+              onKeyDown={(event) => {
+                if (event.key !== "Enter") {
+                  return;
+                }
+                event.preventDefault();
+                if (event.shiftKey) {
+                  goToPreviousMatch();
+                } else {
+                  goToNextMatch();
+                }
+              }}
             />
           </label>
 
@@ -561,6 +624,16 @@ export function App(): React.ReactElement {
               onChange={(event) => setSearchMetadataLimit(Number(event.target.value))}
             />
           </label>
+        </div>
+
+        <div className="search-nav-compact">
+          <button type="button" onClick={goToPreviousMatch} disabled={availableMatches === 0}>
+            Prev
+          </button>
+          <button type="button" onClick={goToNextMatch} disabled={availableMatches === 0}>
+            Next
+          </button>
+          <span className="search-counter">{matchCounterLabel}</span>
         </div>
 
         <div className="toggle-row">
@@ -591,6 +664,7 @@ export function App(): React.ReactElement {
               setSearchQuery("");
               setSearchMetadata(null);
               setExpandedPaths(new Set<string>());
+              setActiveMatchIndex(null);
             }}
           >
             Reset viewer state
@@ -609,6 +683,7 @@ export function App(): React.ReactElement {
           <li>Pretty line numbers: {metadata ? "n/a" : showLineNumbers ? "on" : "off"}</li>
           <li>Selected path: {selectedPath}</li>
           <li>Search query: {searchQuery || "none"}</li>
+          <li>Active match: {matchCounterLabel}</li>
           <li>Search highlight style: {searchHighlightMode}</li>
           <li>
             Search matches: {
@@ -646,6 +721,7 @@ export function App(): React.ReactElement {
             }}
             pathFilterQuery={pathFilterQuery}
             searchQuery={searchQuery}
+            activeMatchIndex={activeMatchIndex}
             pathFilterCaseSensitive={pathFilterCaseSensitive}
             pathFilterMode={pathFilterMode}
             searchMetadataLimit={searchMetadataLimit}
@@ -677,6 +753,7 @@ export function App(): React.ReactElement {
             overscan={overscan}
             pathFilterQuery={pathFilterQuery}
             searchQuery={searchQuery}
+            activeMatchIndex={activeMatchIndex}
             pathFilterCaseSensitive={pathFilterCaseSensitive}
             pathFilterMode={pathFilterMode}
             searchMetadataLimit={searchMetadataLimit}
