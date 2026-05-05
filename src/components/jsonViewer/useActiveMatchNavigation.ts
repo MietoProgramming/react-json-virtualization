@@ -1,4 +1,4 @@
-import { useEffect, useMemo } from "react";
+import { useEffect, useMemo, useRef } from "react";
 import type { FlatJsonRow, JSONViewerSearchMetadata } from "../../core/types";
 import { resolveActiveMatchTarget } from "./activeMatch";
 
@@ -76,6 +76,7 @@ export const useActiveMatchNavigation = ({
         const lineIndex = activeMatchTarget.lineNumber - 1;
         return filteredLineIndexByLine.get(lineIndex) ?? null;
     }, [activeMatchTarget, filteredLineIndexByLine, filteredRowIndexByPath]);
+    const lastActiveMatchSignature = useRef<string | null>(null);
 
     useEffect(() => {
         if (!usesMetadataTree || selectedPath !== undefined || !activeMatchPath) {
@@ -86,16 +87,27 @@ export const useActiveMatchNavigation = ({
     }, [activeMatchPath, selectedPath, setInternalSelectedPath, usesMetadataTree]);
 
     useEffect(() => {
-        if (activeMatchScrollIndex === null) {
+        if (activeMatchScrollIndex === null || !activeMatchTarget) {
+            lastActiveMatchSignature.current = null;
             return;
         }
+
+        const nextSignature = activeMatchTarget.mode === "tree"
+            ? `tree:${activeMatchTarget.path}:${activeMatchScrollIndex}`
+            : `plain:${activeMatchTarget.lineNumber}:${activeMatchScrollIndex}`;
+
+        if (lastActiveMatchSignature.current === nextSignature) {
+            return;
+        }
+
+        lastActiveMatchSignature.current = nextSignature;
 
         if (activeMatchScrollIndex >= startIndex && activeMatchScrollIndex < endIndex) {
             return;
         }
 
         scrollToIndex(activeMatchScrollIndex, "center");
-    }, [activeMatchScrollIndex, endIndex, scrollToIndex, startIndex]);
+    }, [activeMatchScrollIndex, activeMatchTarget, endIndex, scrollToIndex, startIndex]);
 
     return {
         activeMatchPath,
