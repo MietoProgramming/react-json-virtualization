@@ -51,3 +51,4 @@ These rules keep the library maintainable, predictable, and release-safe.
 - Avoid broad refactors unless requested.
 - Include short comments only for non-obvious logic.
 - Never add dependencies without clear justification.
+- At the end of development, run: npm run build, npm run lint:fix, npm run format:write, npm run typecheck, npm run test.
