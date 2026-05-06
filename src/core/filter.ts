@@ -1,7 +1,8 @@
 import { splitFilterQueryTerms } from "./filterQuery";
+import { getNormalizedPathSegments, parentPath } from "./pathSegments";
 import type { FlatJsonRow } from "./types";
 
-export type PathFilterMode = "auto" | "includes" | "prefix";
+export type PathFilterMode = "auto" | "includes" | "prefix" | "exact";
 
 interface PathSearchTrieNode {
   children: Map<string, PathSearchTrieNode>;
@@ -20,25 +21,6 @@ export interface PathFilterOptions {
   index?: PathSearchIndex;
 }
 
-const parentPath = (path: string): string | null => {
-  if (path === "$") {
-    return null;
-  }
-
-  if (path.endsWith("]")) {
-    const index = path.lastIndexOf("[");
-    if (index <= 0) {
-      return "$";
-    }
-    return path.slice(0, index);
-  }
-
-  const dotIndex = path.lastIndexOf(".");
-  if (dotIndex <= 0) {
-    return "$";
-  }
-  return path.slice(0, dotIndex);
-};
 
 const normalize = (value: string, caseSensitive: boolean): string => {
   return caseSensitive ? value : value.toLowerCase();
@@ -66,8 +48,11 @@ const createTrieNode = (): PathSearchTrieNode => ({
   rowIndexes: []
 });
 
-const resolveTermMode = (term: string, mode: PathFilterMode | undefined): Exclude<PathFilterMode, "auto"> => {
-  if (mode === "includes" || mode === "prefix") {
+const resolveTermMode = (
+  term: string,
+  mode: PathFilterMode | undefined
+): Exclude<PathFilterMode, "auto"> => {
+  if (mode === "includes" || mode === "prefix" || mode === "exact") {
     return mode;
   }
   return term.startsWith("$") ? "prefix" : "includes";
@@ -133,6 +118,7 @@ export function filterRowsByPathQuery(
   }
 
   const caseSensitive = options.caseSensitive ?? false;
+  const usesExactMatch = options.mode === "exact";
   const needles = queryTerms.map((term) => normalize(term, caseSensitive));
   const singleTermMode = resolveTermMode(queryTerms[0], options.mode);
 
@@ -163,16 +149,30 @@ export function filterRowsByPathQuery(
   } else {
     rows.forEach((row) => {
       const normalizedPath = normalize(row.path, caseSensitive);
+      const normalizedSegments = usesExactMatch
+        ? getNormalizedPathSegments(row.path, caseSensitive)
+        : null;
       const value = toSearchableValue(row);
       const normalizedValue = value === null ? null : normalize(value, caseSensitive);
 
       const matchesAnyTerm = needles.some((needle, index) => {
         const termMode = resolveTermMode(queryTerms[index], options.mode);
-        const pathMatch =
-          termMode === "prefix"
-            ? normalizedPath.startsWith(needle)
-            : normalizedPath.includes(needle);
-        const valueMatch = normalizedValue !== null && normalizedValue.includes(needle);
+        let pathMatch = false;
+        if (termMode === "prefix") {
+          pathMatch = normalizedPath.startsWith(needle);
+        } else if (termMode === "exact") {
+          pathMatch =
+            normalizedPath === needle ||
+            (normalizedSegments !== null && normalizedSegments.includes(needle));
+        } else {
+          pathMatch = normalizedPath.includes(needle);
+        }
+
+        const valueMatch =
+          normalizedValue !== null &&
+          (termMode === "exact"
+            ? normalizedValue === needle
+            : normalizedValue.includes(needle));
         return pathMatch || valueMatch;
       });
 

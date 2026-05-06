@@ -167,6 +167,7 @@ export function App(): React.ReactElement {
   const [pathFilterCaseSensitive, setPathFilterCaseSensitive] = useState<boolean>(false);
   const [pathFilterMode, setPathFilterMode] = useState<PathFilterMode>("auto");
   const [searchQuery, setSearchQuery] = useState<string>("");
+  const [searchCaseSensitive, setSearchCaseSensitive] = useState<boolean>(false);
   const [searchHighlightMode, setSearchHighlightMode] = useState<SearchHighlightMode>("default");
   const [searchMetadataLimit, setSearchMetadataLimit] = useState<number>(500);
   const [searchMetadata, setSearchMetadata] = useState<JSONViewerSearchMetadata | null>(null);
@@ -219,6 +220,7 @@ export function App(): React.ReactElement {
       setPathFilterQuery(scenario.pathFilterQuery);
       setSearchQuery(scenario.searchQuery);
       setPathFilterCaseSensitive(false);
+      setSearchCaseSensitive(false);
       setPathFilterMode("auto");
       setSearchMetadata(null);
     },
@@ -535,6 +537,7 @@ export function App(): React.ReactElement {
               <option value="auto">auto</option>
               <option value="prefix">prefix</option>
               <option value="includes">includes</option>
+              <option value="exact">exact</option>
             </select>
           </label>
 
@@ -649,6 +652,15 @@ export function App(): React.ReactElement {
           <label>
             <input
               type="checkbox"
+              checked={searchCaseSensitive}
+              onChange={(event) => setSearchCaseSensitive(event.target.checked)}
+            />
+            Case sensitive search
+          </label>
+
+          <label>
+            <input
+              type="checkbox"
               checked={isControlledExpansion}
               disabled={viewerMode === "static"}
               onChange={(event) => setIsControlledExpansion(event.target.checked)}
@@ -723,6 +735,7 @@ export function App(): React.ReactElement {
             searchQuery={searchQuery}
             activeMatchIndex={activeMatchIndex}
             pathFilterCaseSensitive={pathFilterCaseSensitive}
+            searchCaseSensitive={searchCaseSensitive}
             pathFilterMode={pathFilterMode}
             searchMetadataLimit={searchMetadataLimit}
             theme={selectedTheme}
@@ -755,6 +768,7 @@ export function App(): React.ReactElement {
             searchQuery={searchQuery}
             activeMatchIndex={activeMatchIndex}
             pathFilterCaseSensitive={pathFilterCaseSensitive}
+            searchCaseSensitive={searchCaseSensitive}
             pathFilterMode={pathFilterMode}
             searchMetadataLimit={searchMetadataLimit}
             theme={selectedTheme}

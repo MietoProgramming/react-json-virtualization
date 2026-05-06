@@ -15,6 +15,7 @@ interface UseViewerContentParams {
   pathFilterQuery?: string;
   searchQuery?: string;
   pathFilterCaseSensitive: boolean;
+  searchCaseSensitive?: boolean;
   pathFilterMode: PathFilterMode;
   searchMetadataLimit?: number;
 }
@@ -53,6 +54,7 @@ export const useViewerContent = ({
   pathFilterQuery,
   searchQuery,
   pathFilterCaseSensitive,
+  searchCaseSensitive = false,
   pathFilterMode,
   searchMetadataLimit
 }: UseViewerContentParams): ViewerContentState => {
@@ -109,7 +111,7 @@ export const useViewerContent = ({
     }
 
     return searchRowsByQueries(filteredRows, searchQueryParts, {
-      caseSensitive: pathFilterCaseSensitive,
+      caseSensitive: searchCaseSensitive,
       mode: pathFilterMode,
       index: searchIndex,
       includeStructuredValueMatch: false
@@ -117,7 +119,7 @@ export const useViewerContent = ({
   }, [
     filteredRows,
     metadata,
-    pathFilterCaseSensitive,
+    searchCaseSensitive,
     pathFilterMode,
     searchIndex,
     searchQueryParts
@@ -137,8 +139,13 @@ export const useViewerContent = ({
       return undefined;
     }
 
-    return searchPrettyLinesByQueries(prettyLines, filterQueryParts, pathFilterCaseSensitive);
-  }, [metadata, pathFilterCaseSensitive, prettyLines, filterQueryParts]);
+    return searchPrettyLinesByQueries(
+      prettyLines,
+      filterQueryParts,
+      pathFilterCaseSensitive,
+      pathFilterMode
+    );
+  }, [metadata, pathFilterCaseSensitive, pathFilterMode, prettyLines, filterQueryParts]);
   const filteredPrettyLineIndexes = metadata ? [] : (filterPlainResult?.filteredLineIndexes ?? []);
   const matchPlainResult = useMemo(() => {
     if (metadata || searchQueryParts.length === 0) {
@@ -150,14 +157,20 @@ export const useViewerContent = ({
     }
 
     if (filterQueryParts.length === 0) {
-      return searchPrettyLinesByQueries(prettyLines, searchQueryParts, pathFilterCaseSensitive);
+      return searchPrettyLinesByQueries(
+        prettyLines,
+        searchQueryParts,
+        searchCaseSensitive,
+        pathFilterMode
+      );
     }
 
     const filteredLines = filteredPrettyLineIndexes.map((lineIndex) => prettyLines[lineIndex]);
     const filteredSearch = searchPrettyLinesByQueries(
       filteredLines,
       searchQueryParts,
-      pathFilterCaseSensitive
+      searchCaseSensitive,
+      pathFilterMode
     );
     const mappedMatches = filteredSearch.matchedLineIndexes.map(
       (filteredIndex) => filteredPrettyLineIndexes[filteredIndex]
@@ -173,7 +186,9 @@ export const useViewerContent = ({
     filteredPrettyLineIndexes,
     filterQueryParts,
     prettyLines,
-    pathFilterCaseSensitive
+    pathFilterCaseSensitive,
+    pathFilterMode,
+    searchCaseSensitive
   ]);
   const matchedPrettyLineIndexSet = useMemo(() => {
     if (metadata || !matchPlainResult || matchPlainResult.matchedLineIndexes.length === 0) {
