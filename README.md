@@ -187,7 +187,7 @@ export function SearchableViewer({ json }: { json: string }) {
 - `searchQuery?: string` Highlights matches without filtering rows or lines. Uses the same tokenization and term matching rules as `pathFilterQuery`. Case sensitivity is controlled by `searchCaseSensitive`.
 - `activeMatchIndex?: number | null` 0-based index into the current `matchedPaths` (tree) or `matchedLineNumbers` (plain) list from `onSearchMetadata`. The viewer scrolls to the active match and applies an active-match highlight. In tree mode, the viewer also updates internal selection when `selectedPath` is uncontrolled.
 - `pathFilterCaseSensitive?: boolean` Case-sensitive path filter mode.
-- `searchCaseSensitive?: boolean` Case-sensitive search mode (applies to path and value matching). Default `false`.
+- `searchCaseSensitive?: boolean` Case-sensitive search mode (applies to path and value matching). Default `false`. Note: prior versions inherited `pathFilterCaseSensitive` for search; set this to `true` to preserve that behavior.
 - `pathFilterMode?: "auto" | "prefix" | "includes" | "exact"` Filter strategy. Defaults to `auto`. `exact` matches full path/segments and full values.
 - `searchMetadataLimit?: number` Maximum identifiers returned in search metadata arrays. Default `500`.
 - `theme?: JsonThemeOverride` Per-token color overrides.

@@ -52,3 +52,4 @@ These rules keep the library maintainable, predictable, and release-safe.
 - Include short comments only for non-obvious logic.
 - Never add dependencies without clear justification.
 - At the end of development, run: npm run build, npm run lint:fix, npm run format:write, npm run typecheck, npm run test.
+- For any breaking change, update CHANGELOG.md with a clear description and migration notes.
