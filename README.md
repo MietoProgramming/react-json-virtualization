@@ -184,10 +184,11 @@ export function SearchableViewer({ json }: { json: string }) {
 - `defaultExpandedPaths?: Iterable<string>` Initial expanded paths in uncontrolled mode.
 - `onExpandedPathsChange?: (paths) => void` Expansion state callback.
 - `pathFilterQuery?: string` Filters by JSON path and all JSON value types (`string`, `number`, `boolean`, `null`, `object`, `array`). Unquoted terms are split by whitespace and matched with OR semantics (`zero hello` matches either term). Wrap exact phrases in quotes (for example `"new york" name`). Quoted single terms are treated the same as unquoted terms. In `metadata=false`, it filters pretty-printed lines.
-- `searchQuery?: string` Highlights matches without filtering rows or lines. Uses the same tokenization and term matching rules as `pathFilterQuery`.
+- `searchQuery?: string` Highlights matches without filtering rows or lines. Uses the same tokenization and term matching rules as `pathFilterQuery`. Case sensitivity is controlled by `searchCaseSensitive`.
 - `activeMatchIndex?: number | null` 0-based index into the current `matchedPaths` (tree) or `matchedLineNumbers` (plain) list from `onSearchMetadata`. The viewer scrolls to the active match and applies an active-match highlight. In tree mode, the viewer also updates internal selection when `selectedPath` is uncontrolled.
 - `pathFilterCaseSensitive?: boolean` Case-sensitive path filter mode.
-- `pathFilterMode?: "auto" | "prefix" | "includes"` Filter strategy. Defaults to `auto`.
+- `searchCaseSensitive?: boolean` Case-sensitive search mode (applies to path and value matching). Default `false`.
+- `pathFilterMode?: "auto" | "prefix" | "includes" | "exact"` Filter strategy. Defaults to `auto`. `exact` matches full path/segments and full values.
 - `searchMetadataLimit?: number` Maximum identifiers returned in search metadata arrays. Default `500`.
 - `theme?: JsonThemeOverride` Per-token color overrides.
 - `selectedPath?: string` Controlled selected node path.

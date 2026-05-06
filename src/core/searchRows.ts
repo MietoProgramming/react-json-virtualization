@@ -1,5 +1,6 @@
 import type { PathFilterMode, PathSearchIndex } from "./filter";
 import { splitFilterQueryTerms } from "./filterQuery";
+import { getNormalizedPathSegments, parentPath } from "./pathSegments";
 import type { FlatJsonRow } from "./types";
 
 interface SearchRowsByQueriesOptions {
@@ -14,7 +15,6 @@ interface QueryDefinition {
   needles: string[];
   indexedPrefixPaths?: Set<string>;
 }
-
 export interface TreeSearchResult {
   filteredRows: FlatJsonRow[];
   directMatchPathSet: Set<string>;
@@ -24,26 +24,6 @@ export interface TreeSearchResult {
 
 export const normalizeQuery = (query?: string): string => {
   return (query ?? "").trim();
-};
-
-const parentPath = (path: string): string | null => {
-  if (path === "$") {
-    return null;
-  }
-
-  if (path.endsWith("]")) {
-    const index = path.lastIndexOf("[");
-    if (index <= 0) {
-      return "$";
-    }
-    return path.slice(0, index);
-  }
-
-  const dotIndex = path.lastIndexOf(".");
-  if (dotIndex <= 0) {
-    return "$";
-  }
-  return path.slice(0, dotIndex);
 };
 
 const normalizeValue = (value: string, caseSensitive: boolean): string => {
@@ -74,7 +54,7 @@ const resolveTermMode = (
   term: string,
   mode: PathFilterMode
 ): Exclude<PathFilterMode, "auto"> => {
-  if (mode === "includes" || mode === "prefix") {
+  if (mode === "includes" || mode === "prefix" || mode === "exact") {
     return mode;
   }
 
@@ -117,17 +97,27 @@ const matchesQueryDefinition = (
   definition: QueryDefinition,
   normalizedPath: string,
   normalizedValue: string | null,
+  normalizedSegments: string[] | null,
   mode: PathFilterMode
 ): boolean => {
   return definition.needles.some((needle, termIndex) => {
     const termMode = resolveTermMode(definition.terms[termIndex], mode);
-    const pathMatch =
-      termMode === "prefix"
-        ? definition.indexedPrefixPaths
-          ? definition.indexedPrefixPaths.has(row.path)
-          : normalizedPath.startsWith(needle)
-        : normalizedPath.includes(needle);
-    const valueMatch = normalizedValue !== null && normalizedValue.includes(needle);
+    let pathMatch = false;
+    if (termMode === "prefix") {
+      pathMatch = definition.indexedPrefixPaths
+        ? definition.indexedPrefixPaths.has(row.path)
+        : normalizedPath.startsWith(needle);
+    } else if (termMode === "exact") {
+      pathMatch =
+        normalizedPath === needle ||
+        (normalizedSegments !== null && normalizedSegments.includes(needle));
+    } else {
+      pathMatch = normalizedPath.includes(needle);
+    }
+
+    const valueMatch =
+      normalizedValue !== null &&
+      (termMode === "exact" ? normalizedValue === needle : normalizedValue.includes(needle));
     return pathMatch || valueMatch;
   });
 };
@@ -160,10 +150,19 @@ export const searchRowsByQueries = (
 
   rows.forEach((row) => {
     const normalizedPath = normalizeValue(row.path, caseSensitive);
+    const normalizedSegments =
+      mode === "exact" ? getNormalizedPathSegments(row.path, caseSensitive) : null;
     const value = toSearchableValue(row, includeStructuredValueMatch);
     const normalizedValueString = value === null ? null : normalizeValue(value, caseSensitive);
     const matchesAllQueries = definitions.every((definition) =>
-      matchesQueryDefinition(row, definition, normalizedPath, normalizedValueString, mode)
+      matchesQueryDefinition(
+        row,
+        definition,
+        normalizedPath,
+        normalizedValueString,
+        normalizedSegments,
+        mode
+      )
     );
 
     if (matchesAllQueries) {

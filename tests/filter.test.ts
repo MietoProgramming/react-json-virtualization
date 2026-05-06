@@ -94,6 +94,27 @@ describe("filterRowsByPathQuery", () => {
     ]);
   });
 
+  it("matches exact path segments", () => {
+    const data = { user: { name: "Alice" } };
+    const rows = flattenJson(data, new Set(["$", "$.user"]));
+
+    const filtered = filterRowsByPathQuery(rows, "user", { mode: "exact" });
+
+    expect(filtered.map((row) => row.path)).toEqual(["$", "$.user", "$.user.name"]);
+  });
+
+  it("matches exact values with case-insensitive mode", () => {
+    const data = { user: { name: "Alice", other: "Alicia" } };
+    const rows = flattenJson(data, new Set(["$", "$.user"]));
+
+    const filtered = filterRowsByPathQuery(rows, "alice", {
+      mode: "exact",
+      caseSensitive: false
+    });
+
+    expect(filtered.map((row) => row.path)).toEqual(["$", "$.user", "$.user.name"]);
+  });
+
   it("uses prefix mode for JSON-path style queries in auto mode", () => {
     const data = { users: [{ name: "Ada" }], profile: { city: "Gdansk" } };
     const rows = flattenJson(data, new Set(["$", "$.users", "$.users[0]", "$.profile"]));

@@ -130,6 +130,27 @@ describe("useViewerContent", () => {
     expect(result.searchMetadata.query).toBe("Linus");
   });
 
+  it("respects searchCaseSensitive for tree search", () => {
+    const root: JSONValue = {
+      users: [{ name: "Alice" }, { name: "alice" }]
+    };
+
+    const result = runUseViewerContent({
+      metadata: true,
+      json: JSON.stringify(root),
+      root,
+      activeExpandedPaths: new Set(["$", "$.users", "$.users[0]", "$.users[1]"]),
+      pathFilterQuery: "",
+      searchQuery: "alice",
+      pathFilterCaseSensitive: false,
+      searchCaseSensitive: true,
+      pathFilterMode: "auto"
+    });
+
+    expect(result.searchMetadata.matchCount).toBe(1);
+    expect(result.searchMetadata.matchedPaths).toEqual(["$.users[1].name"]);
+  });
+
   it("caps metadata match payloads and sets hasMore", () => {
     const root: JSONValue = {
       users: [{ name: "Ada" }, { name: "Ada" }, { name: "Ada" }]
@@ -219,6 +240,28 @@ describe("useViewerContent", () => {
     expect(result.searchMetadata.visibleCount).toBe(4);
     expect(result.searchMetadata.matchedLineNumbers).toEqual([2]);
     expect(result.searchMetadata.matchedRowIds).toEqual(["line:2"]);
+  });
+
+  it("applies exact mode to plain-text search", () => {
+    const json = `{
+  "name": "Alice",
+  "other": "Alicia"
+}`;
+
+    const result = runUseViewerContent({
+      metadata: false,
+      json,
+      root: null,
+      activeExpandedPaths: new Set<string>(),
+      pathFilterQuery: "",
+      searchQuery: "Alice",
+      pathFilterCaseSensitive: false,
+      searchCaseSensitive: false,
+      pathFilterMode: "exact"
+    });
+
+    expect(result.searchMetadata.matchCount).toBe(1);
+    expect(result.searchMetadata.matchedLineNumbers).toEqual([2]);
   });
 
   it("searches within filtered pretty lines", () => {

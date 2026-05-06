@@ -32,6 +32,7 @@ export interface JSONViewerProps {
   searchQuery?: string;
   activeMatchIndex?: number | null;
   pathFilterCaseSensitive?: boolean;
+  searchCaseSensitive?: boolean;
   pathFilterMode?: PathFilterMode;
   searchMetadataLimit?: number;
   theme?: JsonThemeOverride;
@@ -60,6 +61,7 @@ export function JSONViewer({
   searchQuery,
   activeMatchIndex,
   pathFilterCaseSensitive = false,
+  searchCaseSensitive = false,
   pathFilterMode = "auto",
   searchMetadataLimit = 500,
   theme,
@@ -110,6 +112,7 @@ export function JSONViewer({
     pathFilterQuery,
     searchQuery,
     pathFilterCaseSensitive,
+    searchCaseSensitive,
     pathFilterMode,
     searchMetadataLimit
   });
