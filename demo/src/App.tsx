@@ -23,7 +23,7 @@ export function App(): React.ReactElement {
       if (!response.ok) throw new Error(`Failed to fetch sample ${label} (${response.status})`);
       const text = await response.text();
       actions.setJsonText(text);
-      setActiveSamplePath(path);
+      setActiveSamplePath(path as typeof activeSamplePath);
       actions.setSourceFormat(sourceFormatFromFileName(path));
       setSourceLabel(`sample: ${label}`);
       actions.resetInteractiveState();
@@ -123,7 +123,7 @@ export function App(): React.ReactElement {
           onNodeClick={(path, row) => { actions.setSelectedPath(path); actions.setLastClickedRow(row); }}
           onSearchMetadata={actions.setSearchMetadata}
           onParseProgress={(processed, total) => actions.setParseProgress({ processed, total })}
-          onParseError={actions.setParseError}
+          onParseError={(error) => actions.setParseError(error.message)}
         />
       </section>
     </main>

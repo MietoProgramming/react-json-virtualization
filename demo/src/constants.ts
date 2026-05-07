@@ -1,4 +1,5 @@
 import {
+    draculaTheme,
     monokaiTheme,
     nordTheme,
     oneDarkTheme,
@@ -9,6 +10,7 @@ import {
     type PathFilterMode,
     type SourceFormat
 } from "react-json-virtualization";
+export type { PathFilterMode, SourceFormat };
 
 export const sampleSources = [
   {

@@ -24,7 +24,7 @@ export function useDemoState(): [DemoState, DemoStateActions] {
   const actions: DemoStateActions = {
     ...viewerActions, ...panelActions, ...dataActions,
     ...dimensionActions, ...filterActions, ...searchActions, ...expansionActions
-  };
+  } as DemoStateActions;
 
   return [state, actions];
 }

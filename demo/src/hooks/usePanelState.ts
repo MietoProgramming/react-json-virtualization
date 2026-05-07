@@ -4,7 +4,7 @@ import type { DemoState, DemoStateActions } from "./useDemoStateTypes";
 
 export function usePanelState(): [
   Pick<DemoState, "metadata" | "showLineNumbers" | "initialExpandDepth" | "pathFilterMode" | "sourceFormat" | "themePresetName" | "searchHighlightMode" | "selectedTheme" | "searchHighlightClassName" | "viewerMode" | "expandedPaths">,
-  Pick<DemoStateActions, "setViewerMode" | "setExpandedPaths">
+  Pick<DemoStateActions, "setViewerMode" | "setExpandedPaths" | "setMetadata" | "setShowLineNumbers" | "setInitialExpandDepth" | "setPathFilterMode" | "setSourceFormat" | "setThemePresetName" | "setSearchHighlightMode">
 ] {
   const [viewerMode, setViewerMode] = useState<DemoState["viewerMode"]>("collapsable");
   const [expandedPaths, setExpandedPaths] = useState<DemoState["expandedPaths"]>(new Set());
@@ -28,5 +28,5 @@ export function usePanelState(): [
     viewerMode, expandedPaths, metadata, showLineNumbers, initialExpandDepth,
     pathFilterMode, sourceFormat, themePresetName, searchHighlightMode,
     selectedTheme, searchHighlightClassName
-  }, { setViewerMode, setExpandedPaths }];
+  }, { setViewerMode, setExpandedPaths, setMetadata, setShowLineNumbers, setInitialExpandDepth, setPathFilterMode, setSourceFormat, setThemePresetName, setSearchHighlightMode }];
 }
