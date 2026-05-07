@@ -1,794 +1,130 @@
-import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import {
-    VirtualizeJSON,
-    draculaTheme,
-    monokaiTheme,
-    nordTheme,
-    oneDarkTheme,
-    solarizedDarkTheme,
-    solarizedLightTheme,
-    sourceFormatFromFileName,
-    vscodeDarkTheme,
-    type FlatJsonRow,
-    type JSONViewerSearchMetadata,
-    type JsonThemeOverride,
-    type PathFilterMode,
-    type SourceFormat
-} from "react-json-virtualization";
+import React, { useCallback, useState } from "react";
+import { sourceFormatFromFileName } from "react-json-virtualization";
 import { VirtualizeJSONModeDoc } from "./VirtualizeJSONModeDoc";
-
-const sampleSources = [
-  {
-    label: "Users + stats",
-    path: `${import.meta.env.BASE_URL}samples/users-and-stats.json`
-  },
-  {
-    label: "Nested catalog",
-    path: `${import.meta.env.BASE_URL}samples/nested-catalog.json`
-  },
-  {
-    label: "Edge cases",
-    path: `${import.meta.env.BASE_URL}samples/edge-cases.json`
-  },
-  {
-    label: "Large 2M rows (text with spaces)",
-    path: `${import.meta.env.BASE_URL}samples/large-2m-rows-with-spaces.json`
-  },
-  {
-    label: "Large Markdown notes (~1k lines)",
-    path: `${import.meta.env.BASE_URL}samples/markdown-ops-notes-1000.md`
-  },
-  {
-    label: "Large XML catalog (~1k lines)",
-    path: `${import.meta.env.BASE_URL}samples/xml-catalog-1000.xml`
-  },
-  {
-    label: "Large YAML config (~1k lines)",
-    path: `${import.meta.env.BASE_URL}samples/yaml-config-1000.yaml`
-  }
-] as const;
-
-const themePresets: Array<{ name: string; value: JsonThemeOverride }> = [
-  { name: "Default", value: {} },
-  {
-    name: "Warm Sand",
-    value: {
-      background: "#f8f2e6",
-      rowHover: "#efe3cf",
-      rowSelected: "#ddeaf9",
-      key: "#7a3e0d",
-      punctuation: "#5f5f57",
-      string: "#00664b",
-      number: "#1548a8",
-      boolean: "#8d3100",
-      null: "#69550a",
-      focusRing: "#0046b8"
-    }
-  },
-  {
-    name: "Ocean Notebook",
-    value: {
-      background: "#edf5f7",
-      rowHover: "#dcebef",
-      rowSelected: "#c7def6",
-      key: "#0f4668",
-      punctuation: "#3f5c67",
-      string: "#0a6a3d",
-      number: "#1f3cae",
-      boolean: "#8b3a1f",
-      null: "#4e5f11",
-      focusRing: "#2558d8"
-    }
-  },
-  { name: "Monokai", value: monokaiTheme },
-  { name: "VS Code Dark+", value: vscodeDarkTheme },
-  { name: "Solarized Light", value: solarizedLightTheme },
-  { name: "Solarized Dark", value: solarizedDarkTheme },
-  { name: "Dracula", value: draculaTheme },
-  { name: "Nord", value: nordTheme },
-  { name: "One Dark", value: oneDarkTheme }
-];
-
-type SearchHighlightMode = "default" | "left-rail" | "outline" | "underline" | "none";
-
-const searchHighlightOptions: Array<{ label: string; value: SearchHighlightMode }> = [
-  { label: "Default fill", value: "default" },
-  { label: "Left rail", value: "left-rail" },
-  { label: "Dashed outline", value: "outline" },
-  { label: "Underline", value: "underline" },
-  { label: "None", value: "none" }
-];
-
-type DemoScenario = {
-  id: string;
-  label: string;
-  description: string;
-  json: string;
-  pathFilterQuery: string;
-  searchQuery: string;
-  metadata: boolean;
-  showLineNumbers: boolean;
-  sourceFormat: SourceFormat;
-};
-
-const filterSearchScenarioJson = `{
-  "alpha": "one",
-  "beta": "two",
-  "gamma": "one"
-}`;
-
-const demoScenarios: DemoScenario[] = [
-  {
-    id: "plain-filter-search-miss",
-    label: "Plain: filter beta + search one",
-    description: "Expect 0 matches in Live State.",
-    json: filterSearchScenarioJson,
-    pathFilterQuery: "beta",
-    searchQuery: "one",
-    metadata: false,
-    showLineNumbers: true,
-    sourceFormat: "json"
-  },
-  {
-    id: "plain-filter-search-hit",
-    label: "Plain: filter alpha gamma + search one",
-    description: "Expect 2 matches in Live State.",
-    json: filterSearchScenarioJson,
-    pathFilterQuery: "alpha gamma",
-    searchQuery: "one",
-    metadata: false,
-    showLineNumbers: true,
-    sourceFormat: "json"
-  }
-];
-
-async function readFileAsText(file: File): Promise<string> {
-  return await file.text();
-}
+import { DataSourcePanel } from "./components/DataSourcePanel";
+import { DemoHeader } from "./components/DemoHeader";
+import { LiveStatePanel } from "./components/LiveStatePanel";
+import { ScenarioPanel } from "./components/ScenarioPanel";
+import { ViewerControlsPanel } from "./components/ViewerControlsPanel";
+import { ViewerPanel } from "./components/ViewerPanel";
+import { sampleSources } from "./constants";
+import { useDemoState } from "./hooks/useDemoState";
 
 export function App(): React.ReactElement {
-  const [viewerMode, setViewerMode] = useState<"collapsable" | "static">("collapsable");
-  const [jsonText, setJsonText] = useState<string>("{}");
-  const [activeSamplePath, setActiveSamplePath] = useState<string>(sampleSources[0].path);
-  const [sourceFormat, setSourceFormat] = useState<SourceFormat>(() =>
-    sourceFormatFromFileName(sampleSources[0].path)
-  );
+  const [state, actions] = useDemoState();
+  const [activeSamplePath, setActiveSamplePath] = useState(sampleSources[0].path);
   const [isLoadingSample, setIsLoadingSample] = useState(false);
-  const [sourceLabel, setSourceLabel] = useState<string>("none");
+  const [sourceLabel, setSourceLabel] = useState("none");
 
-  const [height, setHeight] = useState<number>(520);
-  const [rowHeight, setRowHeight] = useState<number>(24);
-  const [overscan, setOverscan] = useState<number>(8);
-  const [metadata, setMetadata] = useState<boolean>(true);
-  const [showLineNumbers, setShowLineNumbers] = useState<boolean>(true);
-  const [initialExpandDepth, setInitialExpandDepth] = useState<number>(1);
-
-  const [pathFilterQuery, setPathFilterQuery] = useState<string>("");
-  const [pathFilterCaseSensitive, setPathFilterCaseSensitive] = useState<boolean>(false);
-  const [pathFilterMode, setPathFilterMode] = useState<PathFilterMode>("auto");
-  const [searchQuery, setSearchQuery] = useState<string>("");
-  const [searchCaseSensitive, setSearchCaseSensitive] = useState<boolean>(false);
-  const [searchHighlightMode, setSearchHighlightMode] = useState<SearchHighlightMode>("default");
-  const [searchMetadataLimit, setSearchMetadataLimit] = useState<number>(500);
-  const [searchMetadata, setSearchMetadata] = useState<JSONViewerSearchMetadata | null>(null);
-  const [activeMatchIndex, setActiveMatchIndex] = useState<number | null>(null);
-
-  const [isControlledExpansion, setIsControlledExpansion] = useState<boolean>(false);
-  const [expandedPaths, setExpandedPaths] = useState<Set<string>>(new Set<string>());
-
-  const [selectedPath, setSelectedPath] = useState<string>("$");
-  const [lastClickedRow, setLastClickedRow] = useState<FlatJsonRow | null>(null);
-
-  const [parseProgress, setParseProgress] = useState<{ processed: number; total: number } | null>(
-    null
-  );
-  const [parseError, setParseError] = useState<string | null>(null);
-
-  const [themePresetName, setThemePresetName] = useState<string>(themePresets[0].name);
-
-  const fileInputRef = useRef<HTMLInputElement>(null);
-
-  const selectedTheme = useMemo<JsonThemeOverride>(() => {
-    return themePresets.find((preset) => preset.name === themePresetName)?.value ?? {};
-  }, [themePresetName]);
-
-  const searchHighlightClassName = useMemo(() => {
-    if (searchHighlightMode === "default") {
-      return undefined;
+  const loadSample = useCallback(async (path: string, label: string) => {
+    setIsLoadingSample(true);
+    try {
+      const response = await fetch(path);
+      if (!response.ok) throw new Error(`Failed to fetch sample ${label} (${response.status})`);
+      const text = await response.text();
+      actions.setJsonText(text);
+      setActiveSamplePath(path);
+      actions.setSourceFormat(sourceFormatFromFileName(path));
+      setSourceLabel(`sample: ${label}`);
+      actions.resetInteractiveState();
+    } catch (error) {
+      actions.setParseError(error instanceof Error ? error.message : "Failed to load sample");
+    } finally {
+      setIsLoadingSample(false);
     }
+  }, [actions]);
 
-    return `demo-search-highlight-${searchHighlightMode}`;
-  }, [searchHighlightMode]);
-
-  const resetInteractiveState = useCallback(() => {
-    setParseError(null);
-    setParseProgress(null);
-    setSelectedPath("$");
-    setLastClickedRow(null);
-    setExpandedPaths(new Set<string>());
-    setActiveMatchIndex(null);
-  }, []);
-
-  const applyScenario = useCallback(
-    (scenario: DemoScenario) => {
-      resetInteractiveState();
-      setJsonText(scenario.json);
-      setSourceFormat(scenario.sourceFormat);
-      setSourceLabel(`scenario: ${scenario.label}`);
-      setMetadata(scenario.metadata);
-      setShowLineNumbers(scenario.showLineNumbers);
-      setPathFilterQuery(scenario.pathFilterQuery);
-      setSearchQuery(scenario.searchQuery);
-      setPathFilterCaseSensitive(false);
-      setSearchCaseSensitive(false);
-      setPathFilterMode("auto");
-      setSearchMetadata(null);
-    },
-    [resetInteractiveState]
-  );
-
-  const loadSample = useCallback(
-    async (path: string, label: string) => {
-      setIsLoadingSample(true);
-      try {
-        const response = await fetch(path);
-        if (!response.ok) {
-          throw new Error(`Failed to fetch sample ${label} (${response.status})`);
-        }
-
-        const text = await response.text();
-        setJsonText(text);
-        setActiveSamplePath(path);
-        setSourceFormat(sourceFormatFromFileName(path));
-        setSourceLabel(`sample: ${label}`);
-        resetInteractiveState();
-      } catch (error) {
-        const message = error instanceof Error ? error.message : "Failed to load sample";
-        setParseError(message);
-      } finally {
-        setIsLoadingSample(false);
-      }
-    },
-    [resetInteractiveState]
-  );
-
-  const onFilePicked = useCallback(
-    async (file: File) => {
-      try {
-        const text = await readFileAsText(file);
-        setJsonText(text);
-        setSourceFormat(sourceFormatFromFileName(file.name));
-        setSourceLabel(`file: ${file.name}`);
-        resetInteractiveState();
-      } catch (error) {
-        const message = error instanceof Error ? error.message : "Failed to read file";
-        setParseError(message);
-      }
-    },
-    [resetInteractiveState]
-  );
-
-  const onDropZoneDrop = useCallback(
-    async (event: React.DragEvent<HTMLDivElement>) => {
-      event.preventDefault();
-      const file = event.dataTransfer.files.item(0);
-      if (!file) {
-        return;
-      }
-      await onFilePicked(file);
-    },
-    [onFilePicked]
-  );
-
-  const parseProgressLabel = useMemo(() => {
-    if (!parseProgress || parseProgress.total === 0) {
-      return "-";
+  const onFilePicked = useCallback(async (file: File) => {
+    try {
+      const text = await file.text();
+      actions.setJsonText(text);
+      actions.setSourceFormat(sourceFormatFromFileName(file.name));
+      setSourceLabel(`file: ${file.name}`);
+      actions.resetInteractiveState();
+    } catch (error) {
+      actions.setParseError(error instanceof Error ? error.message : "Failed to read file");
     }
-    const percent = Math.min(100, Math.round((parseProgress.processed / parseProgress.total) * 100));
-    return `${parseProgress.processed}/${parseProgress.total} chars (${percent}%)`;
-  }, [parseProgress]);
-
-  const hasViewerError = parseError !== null;
-  const availableMatches = searchMetadata?.matchedRowIds.length ?? 0;
-  const hasSearchQuery = Boolean(searchMetadata?.query);
-  const matchCounterLabel = !hasSearchQuery
-    ? "n/a"
-    : availableMatches === 0
-      ? "0"
-      : `${(activeMatchIndex ?? 0) + 1} / ${availableMatches}${searchMetadata?.hasMore ? "+" : ""}`;
-
-  const goToNextMatch = useCallback(() => {
-    if (availableMatches === 0) {
-      return;
-    }
-
-    setActiveMatchIndex((current) => {
-      const next = current === null ? 0 : (current + 1) % availableMatches;
-      return next;
-    });
-  }, [availableMatches]);
-
-  const goToPreviousMatch = useCallback(() => {
-    if (availableMatches === 0) {
-      return;
-    }
-
-    setActiveMatchIndex((current) => {
-      const next = current === null
-        ? availableMatches - 1
-        : (current - 1 + availableMatches) % availableMatches;
-      return next;
-    });
-  }, [availableMatches]);
-
-  useEffect(() => {
-    if (!searchMetadata?.query) {
-      setActiveMatchIndex(null);
-      return;
-    }
-
-    if (availableMatches === 0) {
-      setActiveMatchIndex(null);
-      return;
-    }
-
-    setActiveMatchIndex((current) => {
-      if (current === null || current < 0 || current >= availableMatches) {
-        return 0;
-      }
-      return current;
-    });
-  }, [availableMatches, searchMetadata?.query]);
+  }, [actions]);
 
   return (
     <main className="demo-shell">
-      <header className="demo-header">
-        <h1>react-json-virtualization playground</h1>
-        <p>
-          Drag and drop JSON, YAML, XML, or Markdown, load repo samples, and test parsing,
-          filtering, selection, expansion, theming, and virtualization behavior in one place.
-        </p>
-      </header>
-
+      <DemoHeader />
       <VirtualizeJSONModeDoc />
 
-      <section className="panel controls-panel">
-        <h2>Data Source</h2>
+      <DataSourcePanel
+        activeSamplePath={activeSamplePath}
+        isLoadingSample={isLoadingSample}
+        sourceLabel={sourceLabel}
+        onSampleSelect={loadSample}
+        onFilePicked={onFilePicked}
+      />
 
-        <div
-          className="drop-zone"
-          onDragOver={(event) => event.preventDefault()}
-          onDrop={onDropZoneDrop}
-          role="button"
-          tabIndex={0}
-          onClick={() => fileInputRef.current?.click()}
-          onKeyDown={(event) => {
-            if (event.key === "Enter") {
-              fileInputRef.current?.click();
-            }
-          }}
-        >
-          <strong>Drop a JSON, YAML, XML, or Markdown file here</strong>
-          <span>or click to choose a local file</span>
-        </div>
+      <ScenarioPanel onScenarioApply={actions.applyScenario} />
 
-        <input
-          ref={fileInputRef}
-          className="file-input"
-          type="file"
-          accept="application/json,application/xml,text/xml,text/markdown,text/plain,text/yaml,application/x-yaml,.json,.xml,.yaml,.yml,.md,.markdown,.txt"
-          onChange={async (event) => {
-            const file = event.target.files?.item(0);
-            if (file) {
-              await onFilePicked(file);
-            }
-          }}
-        />
+      <ViewerControlsPanel
+        height={state.height} rowHeight={state.rowHeight} overscan={state.overscan}
+        metadata={state.metadata} showLineNumbers={state.showLineNumbers}
+        viewerMode={state.viewerMode} initialExpandDepth={state.initialExpandDepth}
+        pathFilterMode={state.pathFilterMode} sourceFormat={state.sourceFormat}
+        themePresetName={state.themePresetName} searchHighlightMode={state.searchHighlightMode}
+        pathFilterQuery={state.pathFilterQuery} searchQuery={state.searchQuery}
+        searchMetadataLimit={state.searchMetadataLimit} isFilterEnabled={state.isFilterEnabled}
+        pathFilterCaseSensitive={state.pathFilterCaseSensitive}
+        searchCaseSensitive={state.searchCaseSensitive}
+        isControlledExpansion={state.isControlledExpansion}
+        availableMatches={state.availableMatches} matchCounterLabel={state.matchCounterLabel}
+        onHeightChange={actions.setHeight} onRowHeightChange={actions.setRowHeight}
+        onOverscanChange={actions.setOverscan} onMetadataChange={actions.setMetadata}
+        onShowLineNumbersChange={actions.setShowLineNumbers}
+        onViewerModeChange={actions.setViewerMode}
+        onInitialExpandDepthChange={actions.setInitialExpandDepth}
+        onPathFilterModeChange={actions.setPathFilterMode}
+        onSourceFormatChange={actions.setSourceFormat}
+        onThemePresetChange={actions.setThemePresetName}
+        onSearchHighlightChange={actions.setSearchHighlightMode}
+        onPathFilterQueryChange={actions.setPathFilterQuery}
+        onSearchQueryChange={actions.setSearchQuery}
+        onSearchMetadataLimitChange={actions.setSearchMetadataLimit}
+        onIsFilterEnabledChange={actions.setIsFilterEnabled}
+        onPathFilterCaseSensitiveChange={actions.setPathFilterCaseSensitive}
+        onSearchCaseSensitiveChange={actions.setSearchCaseSensitive}
+        onIsControlledExpansionChange={actions.setIsControlledExpansion}
+        onGoToNextMatch={actions.goToNextMatch} onGoToPreviousMatch={actions.goToPreviousMatch}
+        onResetState={actions.resetInteractiveState}
+      />
 
-        <div className="field-grid">
-          <label>
-            Repo sample
-            <select
-              value={activeSamplePath}
-              onChange={(event) => {
-                setActiveSamplePath(event.target.value);
-              }}
-            >
-              {sampleSources.map((sample) => (
-                <option key={sample.path} value={sample.path}>
-                  {sample.label}
-                </option>
-              ))}
-            </select>
-          </label>
-
-          <button
-            type="button"
-            onClick={async () => {
-              const selected = sampleSources.find((sample) => sample.path === activeSamplePath);
-              if (!selected) {
-                return;
-              }
-              await loadSample(selected.path, selected.label);
-            }}
-            disabled={isLoadingSample}
-          >
-            {isLoadingSample ? "Loading sample..." : "Load selected sample"}
-          </button>
-        </div>
-
-        <p className="muted">Active source: {sourceLabel}</p>
-      </section>
-
-      <section className="panel controls-panel">
-        <h2>Search + Filter Scenarios</h2>
-        <p className="muted">
-          Quick presets for validating that search matches are limited to filtered lines in plain
-          mode.
-        </p>
-        <div className="scenario-grid">
-          {demoScenarios.map((scenario) => (
-            <button
-              key={scenario.id}
-              type="button"
-              className="scenario-card"
-              onClick={() => applyScenario(scenario)}
-            >
-              <strong>{scenario.label}</strong>
-              <span>{scenario.description}</span>
-            </button>
-          ))}
-        </div>
-      </section>
-
-      <section className="panel controls-panel">
-        <h2>Viewer Controls</h2>
-
-        <div className="field-grid three-col">
-          <label>
-            Height
-            <input
-              type="number"
-              min={240}
-              max={1000}
-              value={height}
-              onChange={(event) => setHeight(Number(event.target.value))}
-            />
-          </label>
-
-          <label>
-            Row height
-            <input
-              type="number"
-              min={16}
-              max={48}
-              value={rowHeight}
-              onChange={(event) => setRowHeight(Number(event.target.value))}
-            />
-          </label>
-
-          <label>
-            Overscan
-            <input
-              type="number"
-              min={0}
-              max={40}
-              value={overscan}
-              onChange={(event) => setOverscan(Number(event.target.value))}
-            />
-          </label></div>
-
-         <div className="field-grid four-col">
-
-          <label>
-            Metadata
-            <select
-              value={metadata ? "enabled" : "disabled"}
-              onChange={(event) => setMetadata(event.target.value === "enabled")}
-            >
-              <option value="enabled">enabled (tree + Object/Array meta)</option>
-              <option value="disabled">disabled (virtualized pretty JSON)</option>
-            </select>
-          </label>
-
-          <label>
-            Pretty line numbers
-            <select
-              value={showLineNumbers ? "on" : "off"}
-              onChange={(event) => setShowLineNumbers(event.target.value === "on")}
-              disabled={metadata}
-            >
-              <option value="on">on</option>
-              <option value="off">off</option>
-            </select>
-          </label>
-
-          <label>
-            Viewer mode
-            <select
-              value={viewerMode}
-              onChange={(event) =>
-                setViewerMode(event.target.value as "collapsable" | "static")
-              }
-            >
-              <option value="collapsable">Collapsable</option>
-              <option value="static">Static</option>
-            </select>
-          </label>
-
-          <label>
-            Initial expand depth
-            <input
-              type="number"
-              min={0}
-              max={8}
-              value={initialExpandDepth}
-              disabled={viewerMode === "static"}
-              onChange={(event) => setInitialExpandDepth(Number(event.target.value))}
-            />
-          </label>
-
-          <label>
-            Filter mode
-            <select
-              value={pathFilterMode}
-              onChange={(event) => setPathFilterMode(event.target.value as PathFilterMode)}
-            >
-              <option value="auto">auto</option>
-              <option value="prefix">prefix</option>
-              <option value="includes">includes</option>
-              <option value="exact">exact</option>
-            </select>
-          </label>
-
-          <label>
-            Source format
-            <select
-              value={sourceFormat}
-              onChange={(event) => setSourceFormat(event.target.value as SourceFormat)}
-            >
-              <option value="auto">auto</option>
-              <option value="json">json</option>
-              <option value="yaml">yaml</option>
-              <option value="xml">xml</option>
-              <option value="markdown">markdown</option>
-              <option value="text">text</option>
-            </select>
-          </label>
-
-          <label>
-            Theme preset
-            <select
-              value={themePresetName}
-              onChange={(event) => setThemePresetName(event.target.value)}
-            >
-              {themePresets.map((preset) => (
-                <option key={preset.name} value={preset.name}>
-                  {preset.name}
-                </option>
-              ))}
-            </select>
-          </label>
-
-          <label>
-            Search highlight style
-            <select
-              value={searchHighlightMode}
-              onChange={(event) => setSearchHighlightMode(event.target.value as SearchHighlightMode)}
-            >
-              {searchHighlightOptions.map((option) => (
-                <option key={option.value} value={option.value}>
-                  {option.label}
-                </option>
-              ))}
-            </select>
-          </label>
-        </div>
-
-        <div className="field-grid">
-          <label>
-            Path/value filter query
-            <input
-              type="text"
-              placeholder='e.g. zero hello, "new york" name, or $.users[1]'
-              value={pathFilterQuery}
-              onChange={(event) => setPathFilterQuery(event.target.value)}
-            />
-          </label>
-
-          <label>
-            Search query (highlights matches, no filtering)
-            <input
-              type="text"
-              placeholder='e.g. Ada active or "new york"'
-              value={searchQuery}
-              onChange={(event) => setSearchQuery(event.target.value)}
-              onKeyDown={(event) => {
-                if (event.key !== "Enter") {
-                  return;
-                }
-                event.preventDefault();
-                if (event.shiftKey) {
-                  goToPreviousMatch();
-                } else {
-                  goToNextMatch();
-                }
-              }}
-            />
-          </label>
-
-          <label>
-            Search metadata limit
-            <input
-              type="number"
-              min={0}
-              max={2000}
-              value={searchMetadataLimit}
-              onChange={(event) => setSearchMetadataLimit(Number(event.target.value))}
-            />
-          </label>
-        </div>
-
-        <div className="search-nav-compact">
-          <button type="button" onClick={goToPreviousMatch} disabled={availableMatches === 0}>
-            Prev
-          </button>
-          <button type="button" onClick={goToNextMatch} disabled={availableMatches === 0}>
-            Next
-          </button>
-          <span className="search-counter">{matchCounterLabel}</span>
-        </div>
-
-        <div className="toggle-row">
-          <label>
-            <input
-              type="checkbox"
-              checked={pathFilterCaseSensitive}
-              onChange={(event) => setPathFilterCaseSensitive(event.target.checked)}
-            />
-            Case sensitive filter
-          </label>
-
-          <label>
-            <input
-              type="checkbox"
-              checked={searchCaseSensitive}
-              onChange={(event) => setSearchCaseSensitive(event.target.checked)}
-            />
-            Case sensitive search
-          </label>
-
-          <label>
-            <input
-              type="checkbox"
-              checked={isControlledExpansion}
-              disabled={viewerMode === "static"}
-              onChange={(event) => setIsControlledExpansion(event.target.checked)}
-            />
-            Use controlled expansion
-          </label>
-
-          <button
-            type="button"
-            onClick={() => {
-              setSelectedPath("$");
-              setPathFilterQuery("");
-              setSearchQuery("");
-              setSearchMetadata(null);
-              setExpandedPaths(new Set<string>());
-              setActiveMatchIndex(null);
-            }}
-          >
-            Reset viewer state
-          </button>
-        </div>
-      </section>
-
-      <section className="panel status-panel">
-        <h2>Live State</h2>
-        <ul>
-          <li>Parse progress: {parseProgressLabel}</li>
-          <li>Parse error: {hasViewerError ? parseError : "none"}</li>
-          <li>Viewer mode: {viewerMode}</li>
-          <li>Source format hint: {sourceFormat}</li>
-          <li>Metadata mode: {metadata ? "enabled" : "disabled"}</li>
-          <li>Pretty line numbers: {metadata ? "n/a" : showLineNumbers ? "on" : "off"}</li>
-          <li>Selected path: {selectedPath}</li>
-          <li>Search query: {searchQuery || "none"}</li>
-          <li>Active match: {matchCounterLabel}</li>
-          <li>Search highlight style: {searchHighlightMode}</li>
-          <li>
-            Search matches: {
-              searchMetadata?.query
-                ? `${searchMetadata.matchCount} direct (${searchMetadata.visibleCount} visible)`
-                : "none"
-            }
-          </li>
-          <li>Search mode: {searchMetadata?.mode ?? "n/a"}</li>
-          <li>Search capped: {searchMetadata ? (searchMetadata.hasMore ? "yes" : "no") : "n/a"}</li>
-          <li>
-            Controlled expanded paths: {viewerMode === "collapsable" ? expandedPaths.size : "n/a (static)"}
-          </li>
-          <li>
-            Last clicked node: {lastClickedRow ? `${lastClickedRow.path} (${lastClickedRow.valueType})` : "none"}
-          </li>
-        </ul>
-      </section>
+      <LiveStatePanel
+        parseProgressLabel={state.parseProgressLabel}
+        parseError={state.parseError ?? ""}
+        viewerMode={state.viewerMode} sourceFormat={state.sourceFormat}
+        metadata={state.metadata} showLineNumbers={state.showLineNumbers}
+        selectedPath={state.selectedPath} searchQuery={state.searchQuery}
+        matchCounterLabel={state.matchCounterLabel} searchHighlightMode={state.searchHighlightMode}
+        searchMatchCount={state.searchMatchCount} searchMode={state.searchMode}
+        searchCapped={state.searchCapped} expandedPathsCount={state.expandedPathsCount}
+        lastClickedRow={state.lastClickedRowStr}
+      />
 
       <section className="panel viewer-panel">
-        <h2>JSON Viewer</h2>
-        {viewerMode === "collapsable" ? (
-          <VirtualizeJSON.Collapsable
-            json={jsonText}
-            sourceFormat={sourceFormat}
-            metadata={metadata}
-            showLineNumbers={showLineNumbers}
-            height={height}
-            rowHeight={rowHeight}
-            overscan={overscan}
-            initialExpandDepth={initialExpandDepth}
-            expandedPaths={isControlledExpansion ? expandedPaths : undefined}
-            onExpandedPathsChange={(nextPaths) => {
-              setExpandedPaths(new Set<string>(nextPaths));
-            }}
-            pathFilterQuery={pathFilterQuery}
-            searchQuery={searchQuery}
-            activeMatchIndex={activeMatchIndex}
-            pathFilterCaseSensitive={pathFilterCaseSensitive}
-            searchCaseSensitive={searchCaseSensitive}
-            pathFilterMode={pathFilterMode}
-            searchMetadataLimit={searchMetadataLimit}
-            theme={selectedTheme}
-            className={searchHighlightClassName}
-            selectedPath={selectedPath}
-            onNodeClick={(path, row) => {
-              setSelectedPath(path);
-              setLastClickedRow(row);
-            }}
-            onSearchMetadata={(metadataResult) => {
-              setSearchMetadata(metadataResult);
-            }}
-            onParseProgress={(processed, total) => {
-              setParseProgress({ processed, total });
-            }}
-            onParseError={(error) => {
-              setParseError(error.message);
-            }}
-          />
-        ) : (
-          <VirtualizeJSON.Static
-            json={jsonText}
-            sourceFormat={sourceFormat}
-            metadata={metadata}
-            showLineNumbers={showLineNumbers}
-            height={height}
-            rowHeight={rowHeight}
-            overscan={overscan}
-            pathFilterQuery={pathFilterQuery}
-            searchQuery={searchQuery}
-            activeMatchIndex={activeMatchIndex}
-            pathFilterCaseSensitive={pathFilterCaseSensitive}
-            searchCaseSensitive={searchCaseSensitive}
-            pathFilterMode={pathFilterMode}
-            searchMetadataLimit={searchMetadataLimit}
-            theme={selectedTheme}
-            className={searchHighlightClassName}
-            selectedPath={selectedPath}
-            onNodeClick={(path, row) => {
-              setSelectedPath(path);
-              setLastClickedRow(row);
-            }}
-            onSearchMetadata={(metadataResult) => {
-              setSearchMetadata(metadataResult);
-            }}
-            onParseProgress={(processed, total) => {
-              setParseProgress({ processed, total });
-            }}
-            onParseError={(error) => {
-              setParseError(error.message);
-            }}
-          />
-        )}
+        <ViewerPanel
+          viewerMode={state.viewerMode} json={state.jsonText} sourceFormat={state.sourceFormat}
+          metadata={state.metadata} showLineNumbers={state.showLineNumbers}
+          height={state.height} rowHeight={state.rowHeight} overscan={state.overscan}
+          initialExpandDepth={state.viewerMode === "collapsable" ? state.initialExpandDepth : undefined}
+          expandedPaths={state.isControlledExpansion ? state.expandedPaths : undefined}
+          pathFilterQuery={state.isFilterEnabled ? state.debouncedPathFilterQuery : ""}
+          searchQuery={state.debouncedSearchQuery} activeMatchIndex={state.activeMatchIndex}
+          pathFilterCaseSensitive={state.pathFilterCaseSensitive}
+          searchCaseSensitive={state.searchCaseSensitive}
+          pathFilterMode={state.pathFilterMode}
+          searchMetadataLimit={state.debouncedSearchMetadataLimit}
+          theme={state.selectedTheme} className={state.searchHighlightClassName}
+          selectedPath={state.selectedPath}
+          onNodeClick={(path, row) => { actions.setSelectedPath(path); actions.setLastClickedRow(row); }}
+          onSearchMetadata={actions.setSearchMetadata}
+          onParseProgress={(processed, total) => actions.setParseProgress({ processed, total })}
+          onParseError={actions.setParseError}
+        />
       </section>
     </main>
   );

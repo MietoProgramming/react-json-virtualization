@@ -1,0 +1,78 @@
+import { type FlatJsonRow, type JSONViewerSearchMetadata, type JsonThemeOverride, type SourceFormat } from "react-json-virtualization";
+import type { SearchHighlightMode } from "../constants";
+
+export interface DemoState {
+  viewerMode: "collapsable" | "static";
+  jsonText: string;
+  sourceFormat: SourceFormat;
+  height: number;
+  rowHeight: number;
+  overscan: number;
+  metadata: boolean;
+  showLineNumbers: boolean;
+  initialExpandDepth: number;
+  pathFilterQuery: string;
+  pathFilterCaseSensitive: boolean;
+  pathFilterMode: "auto" | "prefix" | "includes" | "exact";
+  isFilterEnabled: boolean;
+  searchQuery: string;
+  searchCaseSensitive: boolean;
+  searchHighlightMode: SearchHighlightMode;
+  searchMetadataLimit: number;
+  searchMetadata: JSONViewerSearchMetadata | null;
+  activeMatchIndex: number | null;
+  isControlledExpansion: boolean;
+  expandedPaths: Set<string>;
+  selectedPath: string;
+  lastClickedRow: FlatJsonRow | null;
+  parseProgress: { processed: number; total: number } | null;
+  parseError: string | null;
+  themePresetName: string;
+  debouncedPathFilterQuery: string;
+  debouncedSearchQuery: string;
+  debouncedSearchMetadataLimit: number;
+  selectedTheme: JsonThemeOverride;
+  searchHighlightClassName: string | undefined;
+  parseProgressLabel: string;
+  availableMatches: number;
+  hasSearchQuery: boolean;
+  matchCounterLabel: string;
+  searchMatchCount: string;
+  searchMode: string;
+  searchCapped: string;
+  expandedPathsCount: string;
+  lastClickedRowStr: string;
+}
+
+export interface DemoStateActions {
+  setViewerMode: (v: "collapsable" | "static") => void;
+  setJsonText: (v: string) => void;
+  setSourceFormat: (v: SourceFormat) => void;
+  setHeight: (v: number) => void;
+  setRowHeight: (v: number) => void;
+  setOverscan: (v: number) => void;
+  setMetadata: (v: boolean) => void;
+  setShowLineNumbers: (v: boolean) => void;
+  setInitialExpandDepth: (v: number) => void;
+  setPathFilterQuery: (v: string) => void;
+  setPathFilterCaseSensitive: (v: boolean) => void;
+  setPathFilterMode: (v: "auto" | "prefix" | "includes" | "exact") => void;
+  setIsFilterEnabled: (v: boolean) => void;
+  setSearchQuery: (v: string) => void;
+  setSearchCaseSensitive: (v: boolean) => void;
+  setSearchHighlightMode: (v: SearchHighlightMode) => void;
+  setSearchMetadataLimit: (v: number) => void;
+  setSearchMetadata: (v: JSONViewerSearchMetadata | null) => void;
+  setActiveMatchIndex: (v: number | null) => void;
+  setIsControlledExpansion: (v: boolean) => void;
+  setExpandedPaths: (v: Set<string>) => void;
+  setSelectedPath: (v: string) => void;
+  setLastClickedRow: (v: FlatJsonRow | null) => void;
+  setParseProgress: (v: { processed: number; total: number } | null) => void;
+  setParseError: (v: string | null) => void;
+  setThemePresetName: (v: string) => void;
+  resetInteractiveState: () => void;
+  goToNextMatch: () => void;
+  goToPreviousMatch: () => void;
+  applyScenario: (scenario: { json: string; sourceFormat: SourceFormat; pathFilterQuery: string; searchQuery: string; metadata: boolean; showLineNumbers: boolean }) => void;
+}
