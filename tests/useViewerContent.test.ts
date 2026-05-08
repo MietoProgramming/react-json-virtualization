@@ -151,6 +151,31 @@ describe("useViewerContent", () => {
     expect(result.searchMetadata.matchedPaths).toEqual(["$.users[1].name"]);
   });
 
+  it("respects searchMode independently of pathFilterMode", () => {
+    const root: JSONValue = {
+      users: [{ name: "Alice" }, { name: "Alicia" }]
+    };
+
+    const result = runUseViewerContent({
+      metadata: true,
+      json: JSON.stringify(root),
+      root,
+      activeExpandedPaths: new Set(["$", "$.users", "$.users[0]", "$.users[1]"]),
+      pathFilterQuery: "",
+      searchQuery: "Ali",
+      pathFilterCaseSensitive: false,
+      searchCaseSensitive: false,
+      pathFilterMode: "exact",
+      searchMode: "includes"
+    });
+
+    expect(result.searchMetadata.matchCount).toBe(2);
+    expect(result.searchMetadata.matchedPaths).toEqual([
+      "$.users[0].name",
+      "$.users[1].name"
+    ]);
+  });
+
   it("caps metadata match payloads and sets hasMore", () => {
     const root: JSONValue = {
       users: [{ name: "Ada" }, { name: "Ada" }, { name: "Ada" }]

@@ -70,3 +70,31 @@ dist/                       # Build output (ESM/UMD bundles + type declarations)
 
 - Vite demo is built to `demo/dist/` and deployed via Pages workflow.
 - Alias maps `"react-json-virtualization"` to `../src/index.ts` for dev builds.
+
+## Demo Component Guidelines
+
+### File size rule
+- **Each component file must be a maximum of 200 lines.**
+- If a component exceeds this limit, split it into smaller sub-components.
+- Extract constants, types, and utility functions to separate files (`constants.ts`, `utils.ts`, `hooks/`).
+
+### Recommended structure
+```
+demo/src/
+  App.tsx                          # Orchestrates panels, holds state
+  constants.ts                     # Static data (sample sources, themes, options)
+  components/
+    DemoHeader.tsx
+    DataSourcePanel.tsx
+    ScenarioPanel.tsx
+    ViewerControlsPanel.tsx
+    LiveStatePanel.tsx
+    ViewerPanel.tsx
+    index.ts                       # Barrel export
+```
+
+### Splitting strategy
+1. Extract constants and types to `constants.ts`
+2. Split each `<section>` in App.tsx into its own panel component
+3. Keep App.tsx focused on state management and wiring props to panels
+4. Each panel component should handle its own internal events

@@ -17,6 +17,7 @@ interface UseViewerContentParams {
   pathFilterCaseSensitive: boolean;
   searchCaseSensitive?: boolean;
   pathFilterMode: PathFilterMode;
+  searchMode?: PathFilterMode;
   searchMetadataLimit?: number;
 }
 
@@ -56,6 +57,7 @@ export const useViewerContent = ({
   pathFilterCaseSensitive,
   searchCaseSensitive = false,
   pathFilterMode,
+  searchMode = pathFilterMode,
   searchMetadataLimit
 }: UseViewerContentParams): ViewerContentState => {
   const rows = useMemo(() => {
@@ -78,11 +80,11 @@ export const useViewerContent = ({
       return canUsePrefixPathSearchIndex(splitFilterQueryTerms(query), pathFilterMode);
     });
     const isSearchPrefix = searchQueryParts.some((query) => {
-      return canUsePrefixPathSearchIndex(splitFilterQueryTerms(query), pathFilterMode);
+      return canUsePrefixPathSearchIndex(splitFilterQueryTerms(query), searchMode);
     });
 
     return isFilterPrefix || isSearchPrefix;
-  }, [metadata, pathFilterMode, filterQueryParts, searchQueryParts]);
+  }, [metadata, pathFilterMode, searchMode, filterQueryParts, searchQueryParts]);
 
   const pathSearchIndex = useMemo(() => {
     if (!shouldBuildPathSearchIndex) {
@@ -112,7 +114,7 @@ export const useViewerContent = ({
 
     return searchRowsByQueries(filteredRows, searchQueryParts, {
       caseSensitive: searchCaseSensitive,
-      mode: pathFilterMode,
+      mode: searchMode,
       index: searchIndex,
       includeStructuredValueMatch: false
     });
@@ -120,7 +122,7 @@ export const useViewerContent = ({
     filteredRows,
     metadata,
     searchCaseSensitive,
-    pathFilterMode,
+    searchMode,
     searchIndex,
     searchQueryParts
   ]);
@@ -161,7 +163,7 @@ export const useViewerContent = ({
         prettyLines,
         searchQueryParts,
         searchCaseSensitive,
-        pathFilterMode
+        searchMode
       );
     }
 
@@ -170,7 +172,7 @@ export const useViewerContent = ({
       filteredLines,
       searchQueryParts,
       searchCaseSensitive,
-      pathFilterMode
+      searchMode
     );
     const mappedMatches = filteredSearch.matchedLineIndexes.map(
       (filteredIndex) => filteredPrettyLineIndexes[filteredIndex]
@@ -187,7 +189,7 @@ export const useViewerContent = ({
     filterQueryParts,
     prettyLines,
     pathFilterCaseSensitive,
-    pathFilterMode,
+    searchMode,
     searchCaseSensitive
   ]);
   const matchedPrettyLineIndexSet = useMemo(() => {

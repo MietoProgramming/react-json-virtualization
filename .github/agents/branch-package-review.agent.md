@@ -13,6 +13,7 @@ Your job is to review only code changed in this branch compared to main, identif
 ## Constraints
 - Do not edit files unless explicitly asked to apply fixes.
 - Do not review untouched files unless needed to confirm impact.
+- Ignore the demo/ folder; it is not part of the library.
 - Always prioritize behavior regressions, correctness bugs, and release blockers over style.
 - Always evaluate public package risk: API stability, semver implications, runtime compatibility, and documentation/test coverage gaps.
 
