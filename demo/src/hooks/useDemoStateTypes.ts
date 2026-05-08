@@ -14,6 +14,7 @@ export interface DemoState {
   pathFilterQuery: string;
   pathFilterCaseSensitive: boolean;
   pathFilterMode: "auto" | "prefix" | "includes" | "exact";
+  searchMatchMode: "auto" | "prefix" | "includes" | "exact";
   isFilterEnabled: boolean;
   searchQuery: string;
   searchCaseSensitive: boolean;
@@ -57,6 +58,7 @@ export interface DemoStateActions {
   setPathFilterQuery: (v: string) => void;
   setPathFilterCaseSensitive: (v: boolean) => void;
   setPathFilterMode: (v: "auto" | "prefix" | "includes" | "exact") => void;
+  setSearchMatchMode: (v: "auto" | "prefix" | "includes" | "exact") => void;
   setIsFilterEnabled: (v: boolean) => void;
   setSearchQuery: (v: string) => void;
   setSearchCaseSensitive: (v: boolean) => void;

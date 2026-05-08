@@ -1,5 +1,5 @@
-import { filterModeOptions, sourceFormatOptions, themePresets, searchHighlightOptions } from "../constants";
-import type { PathFilterMode, SourceFormat, SearchHighlightMode } from "../constants";
+import type { PathFilterMode, SearchHighlightMode, SourceFormat } from "../constants";
+import { filterModeOptions, searchHighlightOptions, sourceFormatOptions, themePresets } from "../constants";
 
 interface DisplayControlsProps {
   metadata: boolean;
@@ -7,6 +7,7 @@ interface DisplayControlsProps {
   viewerMode: "collapsable" | "static";
   initialExpandDepth: number;
   pathFilterMode: PathFilterMode;
+  searchMatchMode: PathFilterMode;
   sourceFormat: SourceFormat;
   themePresetName: string;
   searchHighlightMode: SearchHighlightMode;
@@ -15,6 +16,7 @@ interface DisplayControlsProps {
   onViewerModeChange: (v: "collapsable" | "static") => void;
   onInitialExpandDepthChange: (v: number) => void;
   onPathFilterModeChange: (v: PathFilterMode) => void;
+  onSearchMatchModeChange: (v: PathFilterMode) => void;
   onSourceFormatChange: (v: SourceFormat) => void;
   onThemePresetChange: (v: string) => void;
   onSearchHighlightChange: (v: SearchHighlightMode) => void;
@@ -22,9 +24,9 @@ interface DisplayControlsProps {
 
 export function DisplayControls({
   metadata, showLineNumbers, viewerMode, initialExpandDepth,
-  pathFilterMode, sourceFormat, themePresetName, searchHighlightMode,
+  pathFilterMode, searchMatchMode, sourceFormat, themePresetName, searchHighlightMode,
   onMetadataChange, onShowLineNumbersChange, onViewerModeChange,
-  onInitialExpandDepthChange, onPathFilterModeChange, onSourceFormatChange,
+  onInitialExpandDepthChange, onPathFilterModeChange, onSearchMatchModeChange, onSourceFormatChange,
   onThemePresetChange, onSearchHighlightChange
 }: DisplayControlsProps): JSX.Element {
   return (
@@ -64,6 +66,15 @@ export function DisplayControls({
         Filter mode
         <select value={pathFilterMode}
           onChange={(e) => onPathFilterModeChange(e.target.value as PathFilterMode)}>
+          {filterModeOptions.map((opt) => (
+            <option key={opt.value} value={opt.value}>{opt.label}</option>
+          ))}
+        </select>
+      </label>
+      <label>
+        Search mode
+        <select value={searchMatchMode}
+          onChange={(e) => onSearchMatchModeChange(e.target.value as PathFilterMode)}>
           {filterModeOptions.map((opt) => (
             <option key={opt.value} value={opt.value}>{opt.label}</option>
           ))}

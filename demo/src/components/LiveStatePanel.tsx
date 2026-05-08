@@ -10,6 +10,7 @@ interface LiveStatePanelProps {
   matchCounterLabel: string;
   searchHighlightMode: string;
   searchMatchCount: string;
+  searchMatchMode: string;
   searchMode: string;
   searchCapped: string;
   expandedPathsCount: string;
@@ -19,7 +20,7 @@ interface LiveStatePanelProps {
 export function LiveStatePanel({
   parseProgressLabel, parseError, viewerMode, sourceFormat, metadata,
   showLineNumbers, selectedPath, searchQuery, matchCounterLabel,
-  searchHighlightMode, searchMatchCount, searchMode, searchCapped,
+  searchHighlightMode, searchMatchCount, searchMatchMode, searchMode, searchCapped,
   expandedPathsCount, lastClickedRow
 }: LiveStatePanelProps): JSX.Element {
   return (
@@ -37,7 +38,8 @@ export function LiveStatePanel({
         <li>Active match: {matchCounterLabel}</li>
         <li>Search highlight style: {searchHighlightMode}</li>
         <li>Search matches: {searchMatchCount}</li>
-        <li>Search mode: {searchMode}</li>
+        <li>Search match mode: {searchMatchMode}</li>
+        <li>Search metadata mode: {searchMode}</li>
         <li>Search capped: {searchCapped}</li>
         <li>Controlled expanded paths: {expandedPathsCount}</li>
         <li>Last clicked node: {lastClickedRow}</li>

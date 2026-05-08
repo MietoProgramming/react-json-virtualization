@@ -34,6 +34,7 @@ export interface JSONViewerProps {
   pathFilterCaseSensitive?: boolean;
   searchCaseSensitive?: boolean;
   pathFilterMode?: PathFilterMode;
+  searchMode?: PathFilterMode;
   searchMetadataLimit?: number;
   theme?: JsonThemeOverride;
   selectedPath?: string;
@@ -63,6 +64,7 @@ export function JSONViewer({
   pathFilterCaseSensitive = false,
   searchCaseSensitive = false,
   pathFilterMode = "auto",
+  searchMode,
   searchMetadataLimit = 500,
   theme,
   selectedPath,
@@ -114,6 +116,7 @@ export function JSONViewer({
     pathFilterCaseSensitive,
     searchCaseSensitive,
     pathFilterMode,
+    searchMode,
     searchMetadataLimit
   });
   useSearchMetadataCallback(onSearchMetadata, searchMetadata);

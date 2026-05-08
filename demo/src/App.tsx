@@ -65,7 +65,8 @@ export function App(): React.ReactElement {
         height={state.height} rowHeight={state.rowHeight} overscan={state.overscan}
         metadata={state.metadata} showLineNumbers={state.showLineNumbers}
         viewerMode={state.viewerMode} initialExpandDepth={state.initialExpandDepth}
-        pathFilterMode={state.pathFilterMode} sourceFormat={state.sourceFormat}
+        pathFilterMode={state.pathFilterMode} searchMatchMode={state.searchMatchMode}
+        sourceFormat={state.sourceFormat}
         themePresetName={state.themePresetName} searchHighlightMode={state.searchHighlightMode}
         pathFilterQuery={state.pathFilterQuery} searchQuery={state.searchQuery}
         searchMetadataLimit={state.searchMetadataLimit} isFilterEnabled={state.isFilterEnabled}
@@ -79,6 +80,7 @@ export function App(): React.ReactElement {
         onViewerModeChange={actions.setViewerMode}
         onInitialExpandDepthChange={actions.setInitialExpandDepth}
         onPathFilterModeChange={actions.setPathFilterMode}
+        onSearchMatchModeChange={actions.setSearchMatchMode}
         onSourceFormatChange={actions.setSourceFormat}
         onThemePresetChange={actions.setThemePresetName}
         onSearchHighlightChange={actions.setSearchHighlightMode}
@@ -100,7 +102,8 @@ export function App(): React.ReactElement {
         metadata={state.metadata} showLineNumbers={state.showLineNumbers}
         selectedPath={state.selectedPath} searchQuery={state.searchQuery}
         matchCounterLabel={state.matchCounterLabel} searchHighlightMode={state.searchHighlightMode}
-        searchMatchCount={state.searchMatchCount} searchMode={state.searchMode}
+        searchMatchCount={state.searchMatchCount} searchMatchMode={state.searchMatchMode}
+        searchMode={state.searchMode}
         searchCapped={state.searchCapped} expandedPathsCount={state.expandedPathsCount}
         lastClickedRow={state.lastClickedRowStr}
       />
@@ -117,6 +120,7 @@ export function App(): React.ReactElement {
           pathFilterCaseSensitive={state.pathFilterCaseSensitive}
           searchCaseSensitive={state.searchCaseSensitive}
           pathFilterMode={state.pathFilterMode}
+          searchMatchMode={state.searchMatchMode}
           searchMetadataLimit={state.debouncedSearchMetadataLimit}
           theme={state.selectedTheme} className={state.searchHighlightClassName}
           selectedPath={state.selectedPath}

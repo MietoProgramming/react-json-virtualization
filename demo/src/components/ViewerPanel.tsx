@@ -17,6 +17,7 @@ interface ViewerPanelProps {
   pathFilterCaseSensitive: boolean;
   searchCaseSensitive: boolean;
   pathFilterMode: "auto" | "prefix" | "includes" | "exact";
+  searchMatchMode: "auto" | "prefix" | "includes" | "exact";
   searchMetadataLimit: number;
   theme: JsonThemeOverride;
   className?: string;
@@ -31,7 +32,7 @@ export function ViewerPanel({
   viewerMode, json, sourceFormat, metadata, showLineNumbers, height,
   rowHeight, overscan, initialExpandDepth, expandedPaths,
   pathFilterQuery, searchQuery, activeMatchIndex,
-  pathFilterCaseSensitive, searchCaseSensitive, pathFilterMode,
+  pathFilterCaseSensitive, searchCaseSensitive, pathFilterMode, searchMatchMode,
   searchMetadataLimit, theme, className, selectedPath,
   onNodeClick, onSearchMetadata, onParseProgress, onParseError
 }: ViewerPanelProps): JSX.Element {
@@ -49,6 +50,7 @@ export function ViewerPanel({
     pathFilterCaseSensitive,
     searchCaseSensitive,
     pathFilterMode,
+    searchMode: searchMatchMode,
     searchMetadataLimit,
     theme,
     className,

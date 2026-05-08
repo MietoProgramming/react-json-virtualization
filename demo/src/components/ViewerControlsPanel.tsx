@@ -1,8 +1,8 @@
+import type { PathFilterMode, SearchHighlightMode, SourceFormat } from "../constants";
 import { DimensionControls } from "./DimensionControls";
 import { DisplayControls } from "./DisplayControls";
 import { FilterSearchControls } from "./FilterSearchControls";
 import { ToggleControls } from "./ToggleControls";
-import type { PathFilterMode, SourceFormat, SearchHighlightMode } from "../constants";
 
 interface ViewerControlsPanelProps {
   height: number;
@@ -13,6 +13,7 @@ interface ViewerControlsPanelProps {
   viewerMode: "collapsable" | "static";
   initialExpandDepth: number;
   pathFilterMode: PathFilterMode;
+  searchMatchMode: PathFilterMode;
   sourceFormat: SourceFormat;
   themePresetName: string;
   searchHighlightMode: SearchHighlightMode;
@@ -33,6 +34,7 @@ interface ViewerControlsPanelProps {
   onViewerModeChange: (v: "collapsable" | "static") => void;
   onInitialExpandDepthChange: (v: number) => void;
   onPathFilterModeChange: (v: PathFilterMode) => void;
+  onSearchMatchModeChange: (v: PathFilterMode) => void;
   onSourceFormatChange: (v: SourceFormat) => void;
   onThemePresetChange: (v: string) => void;
   onSearchHighlightChange: (v: SearchHighlightMode) => void;
@@ -56,11 +58,14 @@ export function ViewerControlsPanel(props: ViewerControlsPanelProps): JSX.Elemen
       <DisplayControls
         metadata={props.metadata} showLineNumbers={props.showLineNumbers}
         viewerMode={props.viewerMode} initialExpandDepth={props.initialExpandDepth}
-        pathFilterMode={props.pathFilterMode} sourceFormat={props.sourceFormat}
+        pathFilterMode={props.pathFilterMode} searchMatchMode={props.searchMatchMode}
+        sourceFormat={props.sourceFormat}
         themePresetName={props.themePresetName} searchHighlightMode={props.searchHighlightMode}
         onMetadataChange={props.onMetadataChange} onShowLineNumbersChange={props.onShowLineNumbersChange}
         onViewerModeChange={props.onViewerModeChange} onInitialExpandDepthChange={props.onInitialExpandDepthChange}
-        onPathFilterModeChange={props.onPathFilterModeChange} onSourceFormatChange={props.onSourceFormatChange}
+        onPathFilterModeChange={props.onPathFilterModeChange}
+        onSearchMatchModeChange={props.onSearchMatchModeChange}
+        onSourceFormatChange={props.onSourceFormatChange}
         onThemePresetChange={props.onThemePresetChange} onSearchHighlightChange={props.onSearchHighlightChange}
       />
       <FilterSearchControls
