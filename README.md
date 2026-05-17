@@ -13,6 +13,7 @@ Virtualized React JSON viewer for large JSON strings with token-based color them
 - Dedicated `searchQuery` support with AND-combination against `pathFilterQuery`
 - Direct-match highlighting for tree rows and pretty-printed lines
 - Active match navigation via `activeMatchIndex` for external search UI
+- Row-level customization hooks (filter, decorators, render overrides)
 - Trie-indexed prefix path search for low-latency filtering on large trees
 - Controlled and uncontrolled expansion state
 - Token-based color theme overrides (keys, values, punctuation)
@@ -168,6 +169,60 @@ export function SearchableViewer({ json }: { json: string }) {
 }
 ```
 
+Row customization (highlight, actions, and custom rendering):
+
+```tsx
+import { VirtualizeJSON, type JSONViewerRowDecorator, type JSONViewerRowFilter, type JSONViewerRowRenderer } from "react-json-virtualization";
+
+const rowFilter: JSONViewerRowFilter = (context) => {
+  if (context.text.toLowerCase().includes("internal")) {
+    return false;
+  }
+
+  return true;
+};
+
+const rowDecorator: JSONViewerRowDecorator = (context) => {
+  if (!context.text.toLowerCase().includes("craw")) {
+    return undefined;
+  }
+
+  return {
+    className: "row-highlight",
+    actions: (
+      <button type="button" onClick={(event) => event.stopPropagation()}>
+        Flag
+      </button>
+    )
+  };
+};
+
+const rowRenderer: JSONViewerRowRenderer = (context, defaultContent) => {
+  if (!context.text.toLowerCase().includes("craw")) {
+    return defaultContent;
+  }
+
+  return (
+    <button type="button" onClick={(event) => event.stopPropagation()}>
+      {defaultContent}
+    </button>
+  );
+};
+
+export function CustomRows({ json }: { json: string }) {
+  return (
+    <VirtualizeJSON.Collapsable
+      json={json}
+      rowFilter={rowFilter}
+      rowDecorator={rowDecorator}
+      rowRenderer={rowRenderer}
+    />
+  );
+}
+```
+
+Note: custom render content should stay within the fixed row height to keep virtualization accurate.
+
 ## API
 
 ### VirtualizeJSON.Collapsable props
@@ -194,6 +249,9 @@ export function SearchableViewer({ json }: { json: string }) {
 - `theme?: JsonThemeOverride` Per-token color overrides.
 - `selectedPath?: string` Controlled selected node path.
 - `className?: string` Optional custom class.
+- `rowFilter?: (context) => boolean` Optional row/line filter applied after `pathFilterQuery` and before search metadata. Return `true` to keep a row, `false` to hide it.
+- `rowDecorator?: (context) => { className?; style?; leading?; trailing?; actions? }` Optional per-row decoration for classes, styles, and extra UI slots.
+- `rowRenderer?: (context, defaultContent) => ReactNode` Optional override for the row body content while keeping the row container intact.
 - `onNodeClick?: (path, row) => void` Node selection callback.
 - `onSearchMetadata?: (metadata) => void` Search callback with counts and capped match identifiers for both `metadata=true` (tree rows) and `metadata=false` (pretty lines). Does not filter the view.
 - `onParseProgress?: (processed, total) => void` Parse progress callback.
@@ -209,6 +267,17 @@ export function SearchableViewer({ json }: { json: string }) {
 - `hasMore` (`true` when any metadata list was truncated)
 
 When `hasMore` is true, `matchCount` can exceed the length of `matchedPaths` or `matchedLineNumbers`. Use `searchMetadataLimit` to raise the cap if you need to navigate every match.
+
+Row customization context fields (both modes) include:
+
+- `mode`: `tree` or `plain`
+- `id`: row id (`row.id`) or line id (`line:${lineNumber}`)
+- `text`: row or line text used for quick matching
+- `sourceFormat`: resolved source format
+
+Tree mode adds: `path`, `row` (the full `FlatJsonRow`).
+
+Plain mode adds: `line`, `lineIndex`, `lineNumber`.
 
 ### VirtualizeJSON.Static props
 
