@@ -14,6 +14,12 @@ export const VirtualizeJSON = {
     Static: JSONViewerStatic
 } as const;
 
+export type {
+    JSONViewerPlainRowContext,
+    JSONViewerRowContext, JSONViewerRowDecoration, JSONViewerRowDecorator, JSONViewerRowFilter,
+    JSONViewerRowRenderer,
+    JSONViewerTreeRowContext
+} from "./components/jsonViewer/rowCustomization";
 export {
     collapsePath,
     createExpandedPathSet, expandedPathsFromDepth, expandPath, toggleExpandedPath

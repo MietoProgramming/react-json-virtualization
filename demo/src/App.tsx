@@ -4,6 +4,7 @@ import { VirtualizeJSONModeDoc } from "./VirtualizeJSONModeDoc";
 import { DataSourcePanel } from "./components/DataSourcePanel";
 import { DemoHeader } from "./components/DemoHeader";
 import { LiveStatePanel } from "./components/LiveStatePanel";
+import { RowCustomizationPanel } from "./components/RowCustomizationPanel";
 import { ScenarioPanel } from "./components/ScenarioPanel";
 import { ViewerControlsPanel } from "./components/ViewerControlsPanel";
 import { ViewerPanel } from "./components/ViewerPanel";
@@ -45,6 +46,13 @@ export function App(): React.ReactElement {
       actions.setParseError(error instanceof Error ? error.message : "Failed to read file");
     }
   }, [actions]);
+
+  const viewerClassName = [
+    state.searchHighlightClassName,
+    state.rowToggleStyleEnabled ? "demo-toggle-style" : undefined
+  ]
+    .filter(Boolean)
+    .join(" ") || undefined;
 
   return (
     <main className="demo-shell">
@@ -95,6 +103,23 @@ export function App(): React.ReactElement {
         onResetState={actions.resetInteractiveState}
       />
 
+      <RowCustomizationPanel
+        rowHighlightQuery={state.rowHighlightQuery}
+        rowHideQuery={state.rowHideQuery}
+        rowHighlightEnabled={state.rowHighlightEnabled}
+        rowActionsEnabled={state.rowActionsEnabled}
+        rowRendererEnabled={state.rowRendererEnabled}
+        rowHideEnabled={state.rowHideEnabled}
+        rowToggleStyleEnabled={state.rowToggleStyleEnabled}
+        onRowHighlightQueryChange={actions.setRowHighlightQuery}
+        onRowHideQueryChange={actions.setRowHideQuery}
+        onRowHighlightEnabledChange={actions.setRowHighlightEnabled}
+        onRowActionsEnabledChange={actions.setRowActionsEnabled}
+        onRowRendererEnabledChange={actions.setRowRendererEnabled}
+        onRowHideEnabledChange={actions.setRowHideEnabled}
+        onRowToggleStyleEnabledChange={actions.setRowToggleStyleEnabled}
+      />
+
       <LiveStatePanel
         parseProgressLabel={state.parseProgressLabel}
         parseError={state.parseError ?? ""}
@@ -122,8 +147,14 @@ export function App(): React.ReactElement {
           pathFilterMode={state.pathFilterMode}
           searchMatchMode={state.searchMatchMode}
           searchMetadataLimit={state.debouncedSearchMetadataLimit}
-          theme={state.selectedTheme} className={state.searchHighlightClassName}
+          theme={state.selectedTheme} className={viewerClassName}
           selectedPath={state.selectedPath}
+          rowHighlightQuery={state.rowHighlightQuery}
+          rowHideQuery={state.rowHideQuery}
+          rowHighlightEnabled={state.rowHighlightEnabled}
+          rowActionsEnabled={state.rowActionsEnabled}
+          rowRendererEnabled={state.rowRendererEnabled}
+          rowHideEnabled={state.rowHideEnabled}
           onNodeClick={(path, row) => { actions.setSelectedPath(path); actions.setLastClickedRow(row); }}
           onSearchMetadata={actions.setSearchMetadata}
           onParseProgress={(processed, total) => actions.setParseProgress({ processed, total })}

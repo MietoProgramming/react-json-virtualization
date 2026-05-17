@@ -1,10 +1,9 @@
 import React, { useMemo, useState } from "react";
-import { type PathFilterMode } from "../core/filter";
-import { resolveSourceFormat, supportsTreeMetadata, type SourceFormat } from "../core/sourceFormat";
-import type { FlatJsonRow, JSONViewerSearchMetadata } from "../core/types";
+import { resolveSourceFormat, supportsTreeMetadata } from "../core/sourceFormat";
 import { useVirtualization } from "../hooks/useVirtualization";
-import { resolveTheme, type JsonThemeOverride } from "../theme";
+import { resolveTheme } from "../theme";
 import { JSONViewerPlainContent } from "./jsonViewer/JSONViewerPlainContent";
+import type { JSONViewerProps } from "./jsonViewer/JSONViewerProps";
 import { JSONViewerTreeContent } from "./jsonViewer/JSONViewerTreeContent";
 import { useActiveExpandedPaths } from "./jsonViewer/useActiveExpandedPaths";
 import { useActiveMatchNavigation } from "./jsonViewer/useActiveMatchNavigation";
@@ -15,35 +14,7 @@ import { useViewerInteractions } from "./jsonViewer/useViewerInteractions";
 import { useVirtualizedPrettyContent } from "./jsonViewer/useVirtualizedPrettyContent";
 import { createViewerStyle } from "./jsonViewer/viewerStyle";
 
-export interface JSONViewerProps {
-  json: string;
-  sourceFormat?: SourceFormat;
-  metadata?: boolean;
-  showLineNumbers?: boolean;
-  height?: number | string;
-  rowHeight?: number;
-  overscan?: number;
-  alwaysExpanded?: boolean;
-  initialExpandDepth?: number;
-  expandedPaths?: ReadonlySet<string>;
-  defaultExpandedPaths?: Iterable<string>;
-  onExpandedPathsChange?: (paths: Set<string>) => void;
-  pathFilterQuery?: string;
-  searchQuery?: string;
-  activeMatchIndex?: number | null;
-  pathFilterCaseSensitive?: boolean;
-  searchCaseSensitive?: boolean;
-  pathFilterMode?: PathFilterMode;
-  searchMode?: PathFilterMode;
-  searchMetadataLimit?: number;
-  theme?: JsonThemeOverride;
-  selectedPath?: string;
-  className?: string;
-  onNodeClick?: (path: string, row: FlatJsonRow) => void;
-  onParseProgress?: (processedChars: number, totalChars: number) => void;
-  onParseError?: (error: Error) => void;
-  onSearchMetadata?: (metadata: JSONViewerSearchMetadata) => void;
-}
+export type { JSONViewerProps } from "./jsonViewer/JSONViewerProps";
 
 export function JSONViewer({
   json,
@@ -69,6 +40,9 @@ export function JSONViewer({
   theme,
   selectedPath,
   className,
+  rowFilter,
+  rowDecorator,
+  rowRenderer,
   onNodeClick,
   onParseProgress,
   onParseError,
@@ -108,6 +82,7 @@ export function JSONViewer({
     searchMetadata
   } = useViewerContent({
     metadata: usesMetadataTree,
+    sourceFormat: resolvedSourceFormat,
     json,
     root,
     activeExpandedPaths,
@@ -117,7 +92,8 @@ export function JSONViewer({
     searchCaseSensitive,
     pathFilterMode,
     searchMode,
-    searchMetadataLimit
+    searchMetadataLimit,
+    rowFilter
   });
   useSearchMetadataCallback(onSearchMetadata, searchMetadata);
   const { containerRef, onScroll, startIndex, endIndex, topSpacerHeight, bottomSpacerHeight, scrollToIndex } =
@@ -181,6 +157,9 @@ export function JSONViewer({
             activeMatchPath={activeMatchPath}
             activeSelectedPath={activeSelectedPath}
             alwaysExpanded={alwaysExpanded}
+            sourceFormat={resolvedSourceFormat}
+            rowDecorator={rowDecorator}
+            rowRenderer={rowRenderer}
             onToggle={onToggle}
             onSelect={onSelect}
           />
@@ -196,6 +175,9 @@ export function JSONViewer({
             visiblePrettyLineNumbers={visiblePrettyLineNumbers}
             matchedPrettyLineIndexes={matchedPrettyLineIndexSet}
             activeMatchLineIndex={activeMatchLineIndex}
+            sourceFormat={resolvedSourceFormat}
+            rowDecorator={rowDecorator}
+            rowRenderer={rowRenderer}
           />
         )
       )}
