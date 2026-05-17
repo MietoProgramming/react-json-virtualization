@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useCallback } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { DEBOUNCE_MS } from "../constants";
 import type { DemoState, DemoStateActions } from "./useDemoStateTypes";
 
@@ -32,7 +32,7 @@ export function useDimensionState(): [
 
 export function useFilterState(): [
   Pick<DemoState, "pathFilterQuery" | "pathFilterCaseSensitive" | "isFilterEnabled" | "parseProgress" | "parseError" | "selectedPath" | "lastClickedRow" | "debouncedPathFilterQuery" | "parseProgressLabel" | "lastClickedRowStr">,
-  Pick<DemoStateActions, "setPathFilterQuery" | "setPathFilterCaseSensitive" | "setIsFilterEnabled" | "resetInteractiveState">
+  Pick<DemoStateActions, "setPathFilterQuery" | "setPathFilterCaseSensitive" | "setIsFilterEnabled" | "setParseProgress" | "setParseError" | "setSelectedPath" | "setLastClickedRow" | "resetInteractiveState">
 ] {
   const [pathFilterQuery, setPathFilterQuery] = useState("");
   const [pathFilterCaseSensitive, setPathFilterCaseSensitive] = useState(false);
@@ -63,7 +63,7 @@ export function useFilterState(): [
     pathFilterQuery, pathFilterCaseSensitive, isFilterEnabled,
     parseProgress, parseError, selectedPath, lastClickedRow,
     debouncedPathFilterQuery, parseProgressLabel, lastClickedRowStr
-  }, { setPathFilterQuery, setPathFilterCaseSensitive, setIsFilterEnabled, resetInteractiveState }];
+  }, { setPathFilterQuery, setPathFilterCaseSensitive, setIsFilterEnabled, setParseProgress, setParseError, setSelectedPath, setLastClickedRow, resetInteractiveState }];
 }
 
 export function useSearchState(): [
@@ -84,7 +84,7 @@ export function useSearchState(): [
   return [{
     searchQuery, searchCaseSensitive, searchMetadataLimit,
     debouncedSearchQuery, debouncedSearchMetadataLimit
-  }, { setSearchQuery, setSearchCaseSensitive, setSearchMetadataLimit, setSearchMetadata: () => {}, setActiveMatchIndex: () => {}, applyScenario }];
+  }, { setSearchQuery, setSearchCaseSensitive, setSearchMetadataLimit, setSearchMetadata: () => { }, setActiveMatchIndex: () => { }, applyScenario }];
 }
 
 export function useExpansionState(): [
@@ -92,5 +92,5 @@ export function useExpansionState(): [
   Pick<DemoStateActions, "setIsControlledExpansion" | "setExpandedPaths">
 ] {
   const [isControlledExpansion, setIsControlledExpansion] = useState(false);
-  return [{ isControlledExpansion }, { setIsControlledExpansion, setExpandedPaths: () => {} }];
+  return [{ isControlledExpansion }, { setIsControlledExpansion, setExpandedPaths: () => { } }];
 }
