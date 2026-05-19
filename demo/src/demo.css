@@ -261,11 +261,10 @@ button:not(.rjv-toggle):disabled {
     border: 1px solid #c5ad8d;
     border-radius: 6px;
     color: #6a4a2f;
-    font-size: 0;
     height: 16px;
     line-height: 1;
     margin-right: 6px;
-    width: 16px;
+    width: 38px;
 }
 
 .rjv-container.demo-toggle-style button.rjv-toggle:hover {
