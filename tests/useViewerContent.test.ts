@@ -5,16 +5,20 @@ import {
   canUsePrefixPathSearchIndex,
   useViewerContent
 } from "../src/components/jsonViewer/useViewerContent";
+import type { ResolvedSourceFormat } from "../src/core/sourceFormat";
 import type { JSONValue } from "../src/core/types";
 
-type HookParams = Parameters<typeof useViewerContent>[0];
+type HookParams = Omit<Parameters<typeof useViewerContent>[0], "sourceFormat"> & {
+  sourceFormat?: ResolvedSourceFormat;
+};
 type HookResult = ReturnType<typeof useViewerContent>;
 
 const runUseViewerContent = (params: HookParams): HookResult => {
   let result: HookResult | undefined;
+  const resolvedParams = { sourceFormat: "json" as ResolvedSourceFormat, ...params };
 
   const Harness = (): null => {
-    result = useViewerContent(params);
+    result = useViewerContent(resolvedParams);
     return null;
   };
 
@@ -336,5 +340,61 @@ describe("useViewerContent", () => {
     expect(result.matchedPathSet.has("$.emptyObject")).toBe(false);
     expect(result.searchMetadata.matchCount).toBe(1);
     expect(result.searchMetadata.visibleCount).toBe(3);
+  });
+
+  it("applies rowFilter before searching in metadata mode", () => {
+    const root: JSONValue = {
+      users: [{ name: "Ada" }],
+      profile: { city: "Gdansk" }
+    };
+
+    const result = runUseViewerContent({
+      metadata: true,
+      json: JSON.stringify(root),
+      root,
+      activeExpandedPaths: new Set(["$", "$.users", "$.users[0]", "$.profile"]),
+      pathFilterQuery: "",
+      searchQuery: "Gdansk",
+      pathFilterCaseSensitive: false,
+      pathFilterMode: "auto",
+      rowFilter: (context) => {
+        return context.mode === "tree" ? !context.path.startsWith("$.profile") : true;
+      }
+    });
+
+    expect(result.filteredRows.map((row) => row.path)).toEqual([
+      "$",
+      "$.users",
+      "$.users[0]",
+      "$.users[0].name"
+    ]);
+    expect(result.searchMetadata.matchCount).toBe(0);
+    expect(result.searchMetadata.visibleCount).toBe(4);
+  });
+
+  it("applies rowFilter before searching in plain mode", () => {
+    const json = `{
+  "alpha": "one",
+  "bravo": "two",
+  "craw": "three"
+}`;
+
+    const result = runUseViewerContent({
+      metadata: false,
+      json,
+      root: null,
+      activeExpandedPaths: new Set<string>(),
+      pathFilterQuery: "",
+      searchQuery: "two",
+      pathFilterCaseSensitive: false,
+      pathFilterMode: "auto",
+      rowFilter: (context) => {
+        return context.mode === "plain" ? !context.text.includes("bravo") : true;
+      }
+    });
+
+    expect(result.filteredPrettyLineIndexes).toEqual([0, 1, 3, 4]);
+    expect(result.searchMetadata.matchCount).toBe(0);
+    expect(result.searchMetadata.visibleCount).toBe(4);
   });
 });

@@ -1,12 +1,18 @@
 import type { KeyboardEvent, MouseEvent } from "react";
 import React from "react";
+import type { ResolvedSourceFormat } from "../core/sourceFormat";
 import type { FlatJsonRow } from "../core/types";
+import type { JSONViewerRowDecorator, JSONViewerRowRenderer } from "./jsonViewer/rowCustomization";
+import { createTreeRowContext } from "./jsonViewer/rowCustomization";
 
 interface JSONRowProps {
   row: FlatJsonRow;
   isSelected: boolean;
   isSearchMatch?: boolean;
   isActiveMatch?: boolean;
+  sourceFormat: ResolvedSourceFormat;
+  rowDecorator?: JSONViewerRowDecorator;
+  rowRenderer?: JSONViewerRowRenderer;
   onToggle: (path: string) => void;
   onSelect: (path: string) => void;
   canToggle?: boolean;
@@ -49,19 +55,49 @@ export const JSONRow = React.memo(function JSONRow({
   isSelected,
   isSearchMatch = false,
   isActiveMatch = false,
+  sourceFormat,
+  rowDecorator,
+  rowRenderer,
   onToggle,
   onSelect,
   canToggle = true
 }: JSONRowProps) {
+  const hasCustomization = Boolean(rowDecorator || rowRenderer);
+  const context = hasCustomization ? createTreeRowContext(row, sourceFormat) : null;
+  let decoration = undefined;
+  if (context && rowDecorator) {
+    decoration = rowDecorator(context) ?? undefined;
+  }
   const className = [
     "rjv-row",
     isSearchMatch ? "rjv-row-match" : "",
     isActiveMatch ? "rjv-row-active-match" : "",
-    isSelected ? "rjv-row-selected" : ""
+    isSelected ? "rjv-row-selected" : "",
+    decoration?.className ?? ""
   ]
     .filter(Boolean)
     .join(" ");
   const showToggle = canToggle && row.isExpandable;
+  const baseStyle = { paddingLeft: `${row.depth * 16 + 8}px` };
+  const style = decoration?.style ? { ...baseStyle, ...decoration.style } : baseStyle;
+  const defaultContent = (
+    <span className="rjv-row-body">
+      {row.key !== undefined ? (
+        <>
+          <span className="rjv-token-key">{row.key}</span>
+          <span className="rjv-token-punctuation">: </span>
+        </>
+      ) : (
+        <span className="rjv-token-key">$</span>
+      )}
+
+      {renderPrimitive(row)}
+    </span>
+  );
+  let resolvedContent = defaultContent;
+  if (context && rowRenderer) {
+    resolvedContent = rowRenderer(context, defaultContent);
+  }
 
   return (
     <div
@@ -71,6 +107,8 @@ export const JSONRow = React.memo(function JSONRow({
       aria-expanded={row.isExpandable ? row.isExpanded : undefined}
       tabIndex={0}
       onClick={() => onSelect(row.path)}
+      data-row-id={row.id}
+      data-path={row.path}
       onKeyDown={(event: KeyboardEvent<HTMLDivElement>) => {
         if (event.key === "Enter") {
           onSelect(row.path);
@@ -84,7 +122,7 @@ export const JSONRow = React.memo(function JSONRow({
           event.preventDefault();
         }
       }}
-      style={{ paddingLeft: `${row.depth * 16 + 8}px` }}
+      style={style}
     >
       {showToggle ? (
         <button
@@ -103,17 +141,16 @@ export const JSONRow = React.memo(function JSONRow({
           
         </span>
       )}
-
-      {row.key !== undefined ? (
-        <>
-          <span className="rjv-token-key">{row.key}</span>
-          <span className="rjv-token-punctuation">: </span>
-        </>
-      ) : (
-        <span className="rjv-token-key">$</span>
+      <div className="rjv-row-content">
+        {decoration?.leading && <span className="rjv-row-leading">{decoration.leading}</span>}
+        {resolvedContent}
+        {decoration?.trailing && <span className="rjv-row-trailing">{decoration.trailing}</span>}
+      </div>
+      {decoration?.actions && (
+        <div className="rjv-row-actions" onClick={(event) => event.stopPropagation()}>
+          {decoration.actions}
+        </div>
       )}
-
-      {renderPrimitive(row)}
     </div>
   );
 });

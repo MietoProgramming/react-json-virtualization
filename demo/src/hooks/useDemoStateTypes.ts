@@ -43,6 +43,13 @@ export interface DemoState {
   searchCapped: string;
   expandedPathsCount: string;
   lastClickedRowStr: string;
+  rowHighlightQuery: string;
+  rowHideQuery: string;
+  rowHighlightEnabled: boolean;
+  rowActionsEnabled: boolean;
+  rowRendererEnabled: boolean;
+  rowHideEnabled: boolean;
+  rowToggleStyleEnabled: boolean;
 }
 
 export interface DemoStateActions {
@@ -73,6 +80,13 @@ export interface DemoStateActions {
   setParseProgress: (v: { processed: number; total: number } | null) => void;
   setParseError: (v: string | null) => void;
   setThemePresetName: (v: string) => void;
+  setRowHighlightQuery: (v: string) => void;
+  setRowHideQuery: (v: string) => void;
+  setRowHighlightEnabled: (v: boolean) => void;
+  setRowActionsEnabled: (v: boolean) => void;
+  setRowRendererEnabled: (v: boolean) => void;
+  setRowHideEnabled: (v: boolean) => void;
+  setRowToggleStyleEnabled: (v: boolean) => void;
   resetInteractiveState: () => void;
   goToNextMatch: () => void;
   goToPreviousMatch: () => void;

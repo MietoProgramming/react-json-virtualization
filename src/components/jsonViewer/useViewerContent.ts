@@ -3,12 +3,16 @@ import { createPathSearchIndex, type PathFilterMode } from "../../core/filter";
 import { splitFilterQueryTerms } from "../../core/filterQuery";
 import { flattenJson } from "../../core/flatten";
 import { normalizeQuery, searchPrettyLinesByQueries, searchRowsByQueries } from "../../core/search";
+import type { ResolvedSourceFormat } from "../../core/sourceFormat";
 import type { FlatJsonRow, JSONValue, JSONViewerSearchMetadata } from "../../core/types";
 import { toPrettyLines } from "./prettyLines";
+import type { JSONViewerRowFilter } from "./rowCustomization";
+import { createPlainRowContext, createTreeRowContext } from "./rowCustomization";
 import { buildQueryParts, buildSearchMetadata, EMPTY_MATCHED_PATHS, EMPTY_MATCHED_PRETTY_LINE_INDEXES } from "./searchMetadata";
 
 interface UseViewerContentParams {
   metadata: boolean;
+  sourceFormat: ResolvedSourceFormat;
   json: string;
   root: JSONValue | null;
   activeExpandedPaths: ReadonlySet<string>;
@@ -19,6 +23,7 @@ interface UseViewerContentParams {
   pathFilterMode: PathFilterMode;
   searchMode?: PathFilterMode;
   searchMetadataLimit?: number;
+  rowFilter?: JSONViewerRowFilter;
 }
 
 interface ViewerContentState {
@@ -49,6 +54,7 @@ export const canUsePrefixPathSearchIndex = (
 
 export const useViewerContent = ({
   metadata,
+  sourceFormat,
   json,
   root,
   activeExpandedPaths,
@@ -58,7 +64,8 @@ export const useViewerContent = ({
   searchCaseSensitive = false,
   pathFilterMode,
   searchMode = pathFilterMode,
-  searchMetadataLimit
+  searchMetadataLimit,
+  rowFilter
 }: UseViewerContentParams): ViewerContentState => {
   const rows = useMemo(() => {
     if (!metadata || root === null) {
@@ -105,7 +112,16 @@ export const useViewerContent = ({
       index: pathSearchIndex
     });
   }, [metadata, pathFilterCaseSensitive, pathFilterMode, pathSearchIndex, filterQueryParts, rows]);
-  const filteredRows = metadata ? (filterResult?.filteredRows ?? rows) : [];
+  const baseFilteredRows = metadata ? (filterResult?.filteredRows ?? rows) : [];
+  const filteredRows = useMemo(() => {
+    if (!metadata || !rowFilter) {
+      return baseFilteredRows;
+    }
+
+    return baseFilteredRows.filter((row) => {
+      return rowFilter(createTreeRowContext(row, sourceFormat));
+    });
+  }, [baseFilteredRows, metadata, rowFilter, sourceFormat]);
   const searchIndex = filterQueryParts.length === 0 ? pathSearchIndex : undefined;
   const matchSearchResult = useMemo(() => {
     if (!metadata || searchQueryParts.length === 0) {
@@ -148,7 +164,16 @@ export const useViewerContent = ({
       pathFilterMode
     );
   }, [metadata, pathFilterCaseSensitive, pathFilterMode, prettyLines, filterQueryParts]);
-  const filteredPrettyLineIndexes = metadata ? [] : (filterPlainResult?.filteredLineIndexes ?? []);
+  const basePrettyLineIndexes = metadata ? [] : (filterPlainResult?.filteredLineIndexes ?? []);
+  const filteredPrettyLineIndexes = useMemo(() => {
+    if (metadata || !rowFilter) {
+      return basePrettyLineIndexes;
+    }
+
+    return basePrettyLineIndexes.filter((lineIndex) => {
+      return rowFilter(createPlainRowContext(prettyLines[lineIndex], lineIndex, sourceFormat));
+    });
+  }, [basePrettyLineIndexes, metadata, prettyLines, rowFilter, sourceFormat]);
   const matchPlainResult = useMemo(() => {
     if (metadata || searchQueryParts.length === 0) {
       return undefined;
@@ -156,15 +181,6 @@ export const useViewerContent = ({
 
     if (filteredPrettyLineIndexes.length === 0) {
       return { filteredLineIndexes: [], matchedLineIndexes: [] };
-    }
-
-    if (filterQueryParts.length === 0) {
-      return searchPrettyLinesByQueries(
-        prettyLines,
-        searchQueryParts,
-        searchCaseSensitive,
-        searchMode
-      );
     }
 
     const filteredLines = filteredPrettyLineIndexes.map((lineIndex) => prettyLines[lineIndex]);
@@ -186,7 +202,6 @@ export const useViewerContent = ({
     metadata,
     searchQueryParts,
     filteredPrettyLineIndexes,
-    filterQueryParts,
     prettyLines,
     pathFilterCaseSensitive,
     searchMode,
