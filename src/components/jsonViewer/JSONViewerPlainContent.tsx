@@ -78,7 +78,7 @@ export function JSONViewerPlainContent({
                   ))}
                 </span>
               );
-              let resolvedContent = defaultContent;
+              let resolvedContent: React.ReactNode = defaultContent;
               if (context && rowRenderer) {
                 resolvedContent = rowRenderer(context, defaultContent);
               }

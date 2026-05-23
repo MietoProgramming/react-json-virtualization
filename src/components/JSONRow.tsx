@@ -94,7 +94,7 @@ export const JSONRow = React.memo(function JSONRow({
       {renderPrimitive(row)}
     </span>
   );
-  let resolvedContent = defaultContent;
+  let resolvedContent: React.ReactNode = defaultContent;
   if (context && rowRenderer) {
     resolvedContent = rowRenderer(context, defaultContent);
   }
