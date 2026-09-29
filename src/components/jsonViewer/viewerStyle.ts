@@ -18,6 +18,12 @@ export const createViewerStyle = (
     "--rjv-token-number": resolvedTheme.number,
     "--rjv-token-boolean": resolvedTheme.boolean,
     "--rjv-token-null": resolvedTheme.null,
+    "--rjv-token-html-doctype": resolvedTheme.htmlDoctype,
+    "--rjv-token-html-comment": resolvedTheme.htmlComment,
+    "--rjv-token-html-tag": resolvedTheme.htmlTag,
+    "--rjv-token-html-attribute": resolvedTheme.htmlAttribute,
+    "--rjv-token-html-attr-value": resolvedTheme.htmlAttributeValue,
+    "--rjv-token-html-text": resolvedTheme.htmlText,
     "--rjv-focus-ring": resolvedTheme.focusRing
   } as React.CSSProperties;
 };

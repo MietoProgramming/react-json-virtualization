@@ -1,5 +1,6 @@
 import React from "react";
 import type { ResolvedSourceFormat } from "../../core/sourceFormat";
+import { tokenizeHtmlLine } from "./prettyHtmlTokens";
 import { tokenizePrettyLine } from "./prettyTokens";
 import type { JSONViewerRowDecorator, JSONViewerRowRenderer } from "./rowCustomization";
 import { createPlainRowContext } from "./rowCustomization";
@@ -71,7 +72,10 @@ export function JSONViewerPlainContent({
                 .join(" ");
               const defaultContent = (
                 <span className="rjv-plain-line-body">
-                  {tokenizePrettyLine(line).map((token, tokenIndex) => (
+                  {(sourceFormat === "html"
+                    ? tokenizeHtmlLine(line)
+                    : tokenizePrettyLine(line))
+                    .map((token, tokenIndex) => (
                     <span key={`${startIndex + lineOffset}-${tokenIndex}`} className={token.className}>
                       {token.text || " "}
                     </span>

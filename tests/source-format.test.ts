@@ -10,6 +10,9 @@ describe("source format detection", () => {
     it("detects common formats from source text", () => {
         expect(resolveSourceFormat('{"users":[]}')).toBe("json");
         expect(resolveSourceFormat("<root><item>1</item></root>")).toBe("xml");
+        expect(
+            resolveSourceFormat('<!DOCTYPE html>\n<html><body><h1>Hi</h1></body></html>')
+        ).toBe("html");
         expect(resolveSourceFormat("name: Ada\nactive: true\nscore: 12")).toBe("yaml");
         expect(resolveSourceFormat("## Release notes\n- Added parser\n- Added docs")).toBe("markdown");
         expect(resolveSourceFormat("plain text line without delimiters")).toBe("text");
@@ -20,6 +23,8 @@ describe("source format detection", () => {
         expect(sourceFormatFromFileName("config.yaml")).toBe("yaml");
         expect(sourceFormatFromFileName("config.yml")).toBe("yaml");
         expect(sourceFormatFromFileName("layout.xml")).toBe("xml");
+        expect(sourceFormatFromFileName("layout.html")).toBe("html");
+        expect(sourceFormatFromFileName("page.htm")).toBe("html");
         expect(sourceFormatFromFileName("guide.md")).toBe("markdown");
         expect(sourceFormatFromFileName("readme.txt")).toBe("text");
         expect(sourceFormatFromFileName("unknown.bin")).toBe("auto");
@@ -29,6 +34,7 @@ describe("source format detection", () => {
         expect(supportsTreeMetadata("json")).toBe(true);
         expect(supportsTreeMetadata("yaml")).toBe(false);
         expect(supportsTreeMetadata("xml")).toBe(false);
+        expect(supportsTreeMetadata("html")).toBe(false);
         expect(supportsTreeMetadata("markdown")).toBe(false);
         expect(supportsTreeMetadata("text")).toBe(false);
     });
@@ -62,6 +68,18 @@ describe("parseSourceIncremental", () => {
     it("returns plain-source result for markdown", async () => {
         await expect(parseSourceIncremental("## heading\n- one\n- two", "markdown")).resolves.toEqual({
             format: "markdown",
+            root: null
+        });
+    });
+
+    it("keeps HTML sources in plain mode", async () => {
+        await expect(
+            parseSourceIncremental(
+                "<!DOCTYPE html>\n<html><body><h1>Hi</h1></body></html>",
+                "html"
+            )
+        ).resolves.toEqual({
+            format: "html",
             root: null
         });
     });

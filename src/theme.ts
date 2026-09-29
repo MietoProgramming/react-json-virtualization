@@ -10,6 +10,12 @@ export interface JsonTheme {
   number: string;
   boolean: string;
   null: string;
+  htmlDoctype?: string;
+  htmlComment?: string;
+  htmlTag?: string;
+  htmlAttribute?: string;
+  htmlAttributeValue?: string;
+  htmlText?: string;
   focusRing: string;
 }
 
@@ -25,6 +31,12 @@ export const defaultTheme: JsonTheme = {
   number: "#114c9c",
   boolean: "#7b2f8f",
   null: "#8b4e2b",
+  htmlDoctype: "#569cd6",
+  htmlComment: "#6a9955",
+  htmlTag: "#569cd6",
+  htmlAttribute: "#9cdcfe",
+  htmlAttributeValue: "#ce9178",
+  htmlText: "#d4d2cb",
   focusRing: "#205ecf"
 };
 

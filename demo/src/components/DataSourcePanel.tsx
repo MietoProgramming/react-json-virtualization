@@ -47,7 +47,7 @@ export function DataSourcePanel({
           }
         }}
       >
-        <strong>Drop a JSON, YAML, XML, or Markdown file here</strong>
+        <strong>Drop a JSON, YAML, XML, HTML, or Markdown file here</strong>
         <span>or click to choose a local file</span>
       </div>
 
@@ -55,7 +55,7 @@ export function DataSourcePanel({
         ref={fileInputRef}
         className="file-input"
         type="file"
-        accept="application/json,application/xml,text/xml,text/markdown,text/plain,text/yaml,application/x-yaml,.json,.xml,.yaml,.yml,.md,.markdown,.txt"
+        accept="application/json,application/xml,text/xml,text/markdown,text/plain,text/yaml,application/x-yaml,.json,.xml,.yaml,.yml,.md,.markdown,.txt,.html,.htm,text/html,application/xhtml+xml"
         onChange={async (event) => {
           const file = event.target.files?.item(0);
           if (file) {

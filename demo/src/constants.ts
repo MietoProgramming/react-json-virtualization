@@ -40,6 +40,10 @@ export const sampleSources = [
   {
     label: "Large YAML config (~1k lines)",
     path: `${import.meta.env.BASE_URL}samples/yaml-config-1000.yaml`
+  },
+  {
+    label: "Webpage (HTML)",
+    path: `${import.meta.env.BASE_URL}samples/webpage-demo.html`
   }
 ] as const;
 
@@ -153,6 +157,7 @@ export const sourceFormatOptions: Array<{ label: string; value: SourceFormat }> 
   { label: "json", value: "json" },
   { label: "yaml", value: "yaml" },
   { label: "xml", value: "xml" },
+  { label: "html", value: "html" },
   { label: "markdown", value: "markdown" },
   { label: "text", value: "text" }
 ];

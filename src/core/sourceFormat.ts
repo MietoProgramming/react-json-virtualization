@@ -1,10 +1,12 @@
-export type SourceFormat = "auto" | "json" | "yaml" | "xml" | "markdown" | "text";
+export type SourceFormat = "auto" | "json" | "yaml" | "xml" | "markdown" | "text" | "html";
 export type ResolvedSourceFormat = Exclude<SourceFormat, "auto">;
 
 const JSON_START_PATTERN = /^(\{|\[|true\b|false\b|null\b|"|-?\d)/;
 const YAML_KEY_PATTERN = /^([A-Za-z0-9_"'-]+|-\s+[A-Za-z0-9_"'-]+)\s*:/;
 const MARKDOWN_HINT_PATTERN = /^(#{1,6}\s+|[-*+]\s+|>\s+|```|~~~|\|.+\|)/;
 const SAMPLE_LINE_LIMIT = 24;
+const HTML_DOCTYPE_PATTERN = /<!DOCTYPE\s+HTML/i;
+const HTML_ROOT_TAG_PATTERN = /^\s*(?:<!--[\s\S]*?-->)*?<html[\s/>]/i;
 
 const getSampleLines = (source: string): string[] => {
     return source
@@ -38,6 +40,14 @@ const looksLikeMarkdown = (source: string): boolean => {
     return markdownLikeCount >= Math.min(2, lines.length);
 };
 
+const looksLikeHtml = (source: string): boolean => {
+    if (HTML_DOCTYPE_PATTERN.test(source)) {
+        return true;
+    }
+
+    return HTML_ROOT_TAG_PATTERN.test(source);
+};
+
 export const sourceFormatFromFileName = (fileName: string): SourceFormat => {
     const normalized = fileName.toLowerCase();
     if (normalized.endsWith(".json")) {
@@ -45,6 +55,9 @@ export const sourceFormatFromFileName = (fileName: string): SourceFormat => {
     }
     if (normalized.endsWith(".yaml") || normalized.endsWith(".yml")) {
         return "yaml";
+    }
+    if (normalized.endsWith(".html") || normalized.endsWith(".htm")) {
+        return "html";
     }
     if (normalized.endsWith(".xml")) {
         return "xml";
@@ -69,6 +82,10 @@ export const resolveSourceFormat = (
     const trimmed = source.trimStart();
     if (trimmed.length === 0) {
         return "text";
+    }
+
+    if (looksLikeHtml(trimmed)) {
+        return "html";
     }
 
     if (trimmed.startsWith("<")) {

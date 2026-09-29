@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Design System Overview</title>
+    <meta name="description" content="A compact page exercising HTML support." />
+    <link rel="stylesheet" href="/styles/main.css" />
+  </head>
+  <body>
+    <header class="site-header">
+      <nav class="breadcrumbs">
+        <a href="/">home</a> / <a href="/design">design</a> / <span aria-current="page">overview</span>
+      </nav>
+      <h1>Design System Overview</h1>
+      <p class="lede">
+        Typography, color tokens, and spacing rules used across products.
+      </p>
+    </header>
+
+    <main>
+      <section id="typography" aria-labelledby="typography-title">
+        <h2 id="typography-title">Typography</h2>
+        <ul>
+          <li>Display: <code>Space Grotesk</code></li>
+          <li>Body: <code>Inter</code></li>
+          <li>Monospace: <code>JetBrains Mono</code></li>
+        </ul>
+      </section>
+
+      <section id="color" aria-labelledby="color-title">
+        <h2 id="color-title">Color Tokens</h2>
+        <div class="swatches">
+          <span class="swatch" style="background:#0f4668" title="ink">ink</span>
+          <span class="swatch" style="background:#1f3cae" title="sky">sky</span>
+          <span class="swatch" style="background:#0a6a3d" title="leaf">leaf</span>
+        </div>
+      </section>
+
+      <section id="spacing" aria-labelledby="spacing-title">
+        <h2 id="spacing-title">Spacing Scale</h2>
+        <table>
+          <thead>
+            <tr><th>Token</th><th>Size</th></tr>
+          </thead>
+          <tbody>
+            <tr><td>space-1</td><td>4px</td></tr>
+            <tr><td>space-2</td><td>8px</td></tr>
+            <tr><td>space-4</td><td>16px</td></tr>
+            <tr><td>space-8</td><td>32px</td></tr>
+          </tbody>
+        </table>
+      </section>
+    </main>
+
+    <footer class="site-footer">
+      <small>Built with semantic HTML &amp; progressive enhancement.</small>
+    </footer>
+
+    <script type="module" src="/app.js"></script>
+  </body>
+</html>

@@ -86,6 +86,30 @@
     color: var(--rjv-token-null);
 }
 
+.rjv-token-html-doctype {
+    color: var(--rjv-token-html-doctype);
+}
+
+.rjv-token-html-comment {
+    color: var(--rjv-token-html-comment);
+}
+
+.rjv-token-html-tag {
+    color: var(--rjv-token-html-tag);
+}
+
+.rjv-token-html-attribute {
+    color: var(--rjv-token-html-attribute);
+}
+
+.rjv-token-html-attr-value {
+    color: var(--rjv-token-html-attr-value);
+}
+
+.rjv-token-html-text {
+    color: var(--rjv-token-html-text);
+}
+
 .rjv-token-meta {
     opacity: 0.8;
 }
