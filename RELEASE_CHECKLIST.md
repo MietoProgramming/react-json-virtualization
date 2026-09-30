@@ -14,9 +14,21 @@ Workflows:
 
 ## Prerequisites
 
-1. GitHub secret `NPM_TOKEN` is configured.
+1. npm Trusted Publishing is configured for both GitHub Actions workflows.
 2. Local branch is clean (`git status --short` shows nothing).
 3. Local `main` is up to date (`git checkout main && git pull`).
+
+### Configure npm Trusted Publishing (one time)
+
+In the npm package settings for `react-json-virtualization`, add GitHub Actions
+trusted publishers for this repository (`MietoProgramming/react-json-virtualization`):
+
+1. Workflow filename: `release-npm.yml` (stable releases).
+2. Workflow filename: `release-npm-next.yml` (prerelease releases).
+
+Use the exact workflow filenames. Leave the environment name unset because the
+workflows do not use a GitHub environment. The workflows publish through GitHub
+OIDC and do not need an `NPM_TOKEN` secret.
 
 ## Pre-Release Validation
 
