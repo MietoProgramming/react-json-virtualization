@@ -2,6 +2,7 @@ import React, { useCallback, useState } from "react";
 import { sourceFormatFromFileName } from "react-json-virtualization";
 import { VirtualizeJSONModeDoc } from "./VirtualizeJSONModeDoc";
 import { DataSourcePanel } from "./components/DataSourcePanel";
+import { DiffDemoPanel } from "./components/DiffDemoPanel";
 import { DemoHeader } from "./components/DemoHeader";
 import { LiveStatePanel } from "./components/LiveStatePanel";
 import { RowCustomizationPanel } from "./components/RowCustomizationPanel";
@@ -66,6 +67,8 @@ export function App(): React.ReactElement {
         onSampleSelect={loadSample}
         onFilePicked={onFilePicked}
       />
+
+      <DiffDemoPanel />
 
       <ScenarioPanel onScenarioApply={actions.applyScenario} />
 

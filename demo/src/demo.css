@@ -419,6 +419,85 @@ button:not(.rjv-toggle):disabled {
     margin: 10px 0 0;
 }
 
+.demo-diff-panel {
+    display: grid;
+    gap: 12px;
+}
+
+.demo-diff-panel h2 {
+    margin: 0;
+}
+
+.demo-diff-controls,
+.demo-path-controls {
+    align-items: end;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px 16px;
+}
+
+.demo-diff-controls label,
+.demo-path-controls label {
+    display: grid;
+    font-size: 0.9rem;
+    gap: 4px;
+}
+
+.demo-diff-controls input,
+.demo-diff-controls select,
+.demo-path-controls input {
+    font: inherit;
+    max-width: 100%;
+    padding: 6px 8px;
+}
+
+.demo-diff-controls .demo-worker-toggle,
+.demo-path-controls label:has(input[type="checkbox"]) {
+    align-items: center;
+    display: inline-flex;
+    flex-direction: row;
+}
+
+.demo-worker-toggle input,
+.demo-path-controls input[type="checkbox"] {
+    margin-right: 6px;
+}
+
+.demo-diff-inputs {
+    display: grid;
+    gap: 12px;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.demo-diff-inputs label {
+    display: grid;
+    font-weight: 600;
+    gap: 6px;
+}
+
+.demo-diff-inputs textarea {
+    font-family: "IBM Plex Mono", Menlo, Consolas, monospace;
+    font-size: 12px;
+    min-height: 130px;
+    resize: vertical;
+    width: 100%;
+}
+
+.demo-path-controls button {
+    font: inherit;
+    padding: 6px 12px;
+}
+
+.demo-path-controls [aria-live] {
+    color: #43566a;
+    font-size: 0.85rem;
+}
+
+.demo-error {
+    color: #a52626;
+    margin: 0;
+}
+
 @media (max-width: 700px) {
     .demo-shell {
         padding: 14px;
@@ -436,6 +515,10 @@ button:not(.rjv-toggle):disabled {
 
     .mode-doc-table {
         min-width: 560px;
+    }
+
+    .demo-diff-inputs {
+        grid-template-columns: 1fr;
     }
 }
 

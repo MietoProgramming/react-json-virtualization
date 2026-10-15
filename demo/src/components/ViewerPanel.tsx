@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
     VirtualizeJSON,
     type FlatJsonRow,
@@ -9,6 +9,7 @@ import {
     type JSONViewerSearchMetadata,
     type SourceFormat
 } from "react-json-virtualization";
+import { createWorkerProcessor } from "react-json-virtualization/worker";
 
 interface ViewerPanelProps {
   viewerMode: "collapsable" | "static";
@@ -54,6 +55,16 @@ export function ViewerPanel({
   rowActionsEnabled, rowRendererEnabled, rowHideEnabled,
   onNodeClick, onSearchMetadata, onParseProgress, onParseError
 }: ViewerPanelProps): JSX.Element {
+  const [pathDraft, setPathDraft] = useState("");
+  const [revealPath, setRevealPath] = useState<string>();
+  const [revealStatus, setRevealStatus] = useState("");
+  const [copyEnabled, setCopyEnabled] = useState(false);
+  const [copyError, setCopyError] = useState("");
+  const [useWorker, setUseWorker] = useState(false);
+  const processor = useMemo(() => useWorker
+    ? createWorkerProcessor(() => new Worker(new URL("../document.worker.ts", import.meta.url), { type: "module" }))
+    : undefined, [useWorker]);
+  useEffect(() => () => processor?.dispose?.(), [processor]);
   const highlightNeedle = rowHighlightQuery.trim().toLowerCase();
   const hideNeedle = rowHideQuery.trim().toLowerCase();
 
@@ -92,7 +103,7 @@ export function ViewerPanel({
       return undefined;
     }
 
-    return (context, defaultContent) => {
+    return function renderDemoRow(context, defaultContent) {
       const isMatch = context.text.toLowerCase().includes(highlightNeedle);
       if (!isMatch) {
         return defaultContent;
@@ -132,21 +143,27 @@ export function ViewerPanel({
     rowFilter,
     rowDecorator,
     rowRenderer,
+    processor,
     onNodeClick,
     onSearchMetadata,
     onParseProgress,
     onParseError
   };
 
-  if (viewerMode === "collapsable") {
-    return (
-      <VirtualizeJSON.Collapsable
-        {...commonProps}
-        initialExpandDepth={initialExpandDepth}
-        expandedPaths={expandedPaths}
-      />
-    );
-  }
+  const viewer = viewerMode === "collapsable"
+    ? <VirtualizeJSON.Collapsable {...commonProps} initialExpandDepth={initialExpandDepth} expandedPaths={expandedPaths} revealPath={revealPath} copyActions={copyEnabled} onRevealResult={(result) => { setRevealStatus(`${result.status}: ${result.path}`); setRevealPath(undefined); }} onCopyError={(error) => setCopyError(error.message)} />
+    : <VirtualizeJSON.Static {...commonProps} revealPath={revealPath} copyActions={copyEnabled} onRevealResult={(result) => { setRevealStatus(`${result.status}: ${result.path}`); setRevealPath(undefined); }} onCopyError={(error) => setCopyError(error.message)} />;
 
-  return <VirtualizeJSON.Static {...commonProps} />;
+  return (
+    <>
+      <div className="demo-path-controls">
+        <label>Reveal path <input value={pathDraft} onChange={(event) => setPathDraft(event.target.value)} placeholder="$.users[0].name" /></label>
+        <button type="button" onClick={() => { setRevealStatus(""); setRevealPath(pathDraft.trim()); }}>Go</button>
+        <label><input type="checkbox" checked={copyEnabled} onChange={(event) => setCopyEnabled(event.target.checked)} /> Enable row copy actions</label>
+        <label><input type="checkbox" checked={useWorker} onChange={(event) => setUseWorker(event.target.checked)} /> Parse JSON in Web Worker</label>
+        <span aria-live="polite">{revealStatus || copyError}</span>
+      </div>
+      {viewer}
+    </>
+  );
 }

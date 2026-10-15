@@ -3,6 +3,7 @@ import { createExpandedPathSet, expandedPathsFromDepth } from "../../core/expans
 import type { SourceFormat } from "../../core/sourceFormat";
 import { parseSourceIncremental } from "../../core/sourceParser";
 import type { JSONValue } from "../../core/types";
+import type { DocumentProcessor } from "../../core/documents";
 
 interface UseParsedJsonStateParams {
   json: string;
@@ -12,6 +13,7 @@ interface UseParsedJsonStateParams {
   initialExpandDepth: number;
   defaultExpandedPaths?: Iterable<string>;
   isExpandedControlled: boolean;
+  processor?: DocumentProcessor;
   onParseProgress?: (processedChars: number, totalChars: number) => void;
   onParseError?: (error: Error) => void;
   onExpandedPathsChange?: (paths: Set<string>) => void;
@@ -19,6 +21,7 @@ interface UseParsedJsonStateParams {
 
 interface ParsedJsonState {
   root: JSONValue | null;
+  hasRoot: boolean;
   error: string | null;
   isParsing: boolean;
   internalExpandedPaths: Set<string>;
@@ -33,11 +36,13 @@ export const useParsedJsonState = ({
   initialExpandDepth,
   defaultExpandedPaths,
   isExpandedControlled,
+  processor,
   onParseProgress,
   onParseError,
   onExpandedPathsChange
 }: UseParsedJsonStateParams): ParsedJsonState => {
   const [root, setRoot] = useState<JSONValue | null>(null);
+  const [hasRoot, setHasRoot] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isParsing, setIsParsing] = useState(false);
   const [internalExpandedPaths, setInternalExpandedPaths] = useState<Set<string>>(() =>
@@ -55,6 +60,7 @@ export const useParsedJsonState = ({
   useEffect(() => {
     if (!metadata) {
       setRoot(null);
+      setHasRoot(false);
       setIsParsing(false);
       setError(null);
       return;
@@ -65,31 +71,39 @@ export const useParsedJsonState = ({
 
     const parse = async (): Promise<void> => {
       setIsParsing(true);
+      setRoot(null);
+      setHasRoot(false);
       setError(null);
 
       try {
-        const parsedSource = await parseSourceIncremental(json, sourceFormat, {
-          signal: controller.signal,
-          onProgress: (processedChars, totalChars) => {
-            onParseProgressRef.current?.(processedChars, totalChars);
+        let parsedRoot: JSONValue;
+        if (processor) {
+          const parsedDocument = await processor.parse({ format: "json", text: json }, {
+            signal: controller.signal,
+            onProgress: (progress) => onParseProgressRef.current?.(progress.processed, progress.total)
+          });
+          parsedRoot = parsedDocument.root;
+        } else {
+          const parsedSource = await parseSourceIncremental(json, sourceFormat, {
+            signal: controller.signal,
+            onProgress: (processedChars, totalChars) => onParseProgressRef.current?.(processedChars, totalChars)
+          });
+          if (parsedSource.root === null && parsedSource.format !== "json") {
+            throw new Error(`Metadata mode is not available for ${parsedSource.format} sources`);
           }
-        });
-
-        if (!mounted) {
-          return;
+          parsedRoot = parsedSource.root as JSONValue;
         }
 
-        if (parsedSource.root === null) {
-          throw new Error(`Metadata mode is not available for ${parsedSource.format} sources`);
-        }
+        if (!mounted) return;
 
-        setRoot(parsedSource.root);
+        setRoot(parsedRoot);
+        setHasRoot(true);
 
         const nextExpanded =
           alwaysExpanded
-            ? expandedPathsFromDepth(parsedSource.root, Number.POSITIVE_INFINITY)
+            ? expandedPathsFromDepth(parsedRoot, Number.POSITIVE_INFINITY)
             : defaultExpandedPaths === undefined
-              ? expandedPathsFromDepth(parsedSource.root, initialExpandDepth)
+              ? expandedPathsFromDepth(parsedRoot, initialExpandDepth)
               : createExpandedPathSet(defaultExpandedPaths);
 
         if (!isExpandedControlled) {
@@ -128,12 +142,14 @@ export const useParsedJsonState = ({
     initialExpandDepth,
     isExpandedControlled,
     json,
+    processor,
     sourceFormat,
     metadata
   ]);
 
   return {
     root,
+    hasRoot,
     error,
     isParsing,
     internalExpandedPaths,

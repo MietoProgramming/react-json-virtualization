@@ -8,6 +8,7 @@ import { JSONViewerTreeContent } from "./jsonViewer/JSONViewerTreeContent";
 import { useActiveExpandedPaths } from "./jsonViewer/useActiveExpandedPaths";
 import { useActiveMatchNavigation } from "./jsonViewer/useActiveMatchNavigation";
 import { useParsedJsonState } from "./jsonViewer/useParsedJsonState";
+import { useRevealPathNavigation } from "./jsonViewer/useRevealPathNavigation";
 import { useSearchMetadataCallback } from "./jsonViewer/useSearchMetadataCallback";
 import { useViewerContent } from "./jsonViewer/useViewerContent";
 import { useViewerInteractions } from "./jsonViewer/useViewerInteractions";
@@ -39,6 +40,11 @@ export function JSONViewer({
   searchMetadataLimit = 500,
   theme,
   selectedPath,
+  revealPath,
+  onRevealResult,
+  copyActions,
+  copyText,
+  onCopyError,
   className,
   rowFilter,
   rowDecorator,
@@ -46,12 +52,13 @@ export function JSONViewer({
   onNodeClick,
   onParseProgress,
   onParseError,
-  onSearchMetadata
+  onSearchMetadata,
+  processor
 }: JSONViewerProps): React.ReactElement {
   const resolvedSourceFormat = useMemo(() => resolveSourceFormat(json, sourceFormat), [json, sourceFormat]);
   const usesMetadataTree = metadata && supportsTreeMetadata(resolvedSourceFormat);
   const isExpandedControlled = expandedPaths !== undefined;
-  const { root, error, isParsing, internalExpandedPaths, setInternalExpandedPaths } = useParsedJsonState({
+  const { root, hasRoot, error, isParsing, internalExpandedPaths, setInternalExpandedPaths } = useParsedJsonState({
     json,
     sourceFormat: resolvedSourceFormat,
     metadata: usesMetadataTree,
@@ -59,6 +66,7 @@ export function JSONViewer({
     initialExpandDepth,
     defaultExpandedPaths,
     isExpandedControlled,
+    processor,
     onParseProgress,
     onParseError,
     onExpandedPathsChange
@@ -85,6 +93,7 @@ export function JSONViewer({
     sourceFormat: resolvedSourceFormat,
     json,
     root,
+    hasRoot,
     activeExpandedPaths,
     pathFilterQuery,
     searchQuery,
@@ -134,6 +143,23 @@ export function JSONViewer({
     setInternalSelectedPath,
     onNodeClick
   });
+  useRevealPathNavigation({
+    revealPath,
+    sourceKey: `${resolvedSourceFormat}:${json}:${usesMetadataTree}`,
+    root,
+    hasRoot,
+    structuralMode: usesMetadataTree,
+    filteredRows,
+    activeExpandedPaths,
+    isExpandedControlled,
+    alwaysExpanded,
+    selectedPath,
+    onExpandedPathsChange,
+    setInternalExpandedPaths,
+    setInternalSelectedPath,
+    scrollToIndex,
+    onRevealResult
+  });
   const style = createViewerStyle(height, resolveTheme(theme));
   const rootClassName = className ? `rjv-container ${className}` : "rjv-container";
   const rootRole = usesMetadataTree ? "tree" : "region";
@@ -162,6 +188,9 @@ export function JSONViewer({
             rowRenderer={rowRenderer}
             onToggle={onToggle}
             onSelect={onSelect}
+            copyActions={copyActions}
+            copyText={copyText}
+            onCopyError={onCopyError}
           />
         ) : (
           <JSONViewerPlainContent

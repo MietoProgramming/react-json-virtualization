@@ -5,6 +5,12 @@ Virtualized React JSON viewer for large JSON strings with token-based color them
 ## Features
 
 - Incremental async JSON parsing on the main thread
+- React-independent document core for backend and Node.js applications
+- Whole-document search/filter and JSON, YAML 1.2, and XML comparison
+- Stable comparison summaries with optional keyed-array matching and move detection
+- Optional Web Worker processor for parsing, search, filtering, and comparison
+- Reveal a JSON path and opt-in row copy actions
+- Virtualized two-column document diff with a change navigator
 - Virtualized tree rendering for large nested structures
 - JSON-only metadata/tree mode
 - Plain virtualized text mode for non-JSON text-like formats (for example Markdown, XML, YAML, TXT)
@@ -24,6 +30,8 @@ Virtualized React JSON viewer for large JSON strings with token-based color them
 ```bash
 npm install react-json-virtualization
 ```
+
+Applications that only import `react-json-virtualization/core` do not need React. The viewer entry points require React 18 or newer; install React when using the React components.
 
 ## Demo
 
@@ -110,6 +118,30 @@ import { VirtualizeJSON } from "react-json-virtualization";
 export function StaticExample({ json }: { json: string }) {
   return <VirtualizeJSON.Static json={json} height={480} rowHeight={24} />;
 }
+```
+
+Reveal a node path and enable row copy actions:
+
+```tsx
+<VirtualizeJSON.Collapsable
+  json={payload}
+  revealPath="$.users[1].name"
+  onRevealResult={({ path, status }) => console.log(status, path)}
+  copyActions={{ path: true, value: true, subtree: true }}
+  onCopyError={(error, path) => console.error(`Copy failed at ${path}`, error)}
+/>
+```
+
+Compare two documents in the virtualized React viewer:
+
+```tsx
+<VirtualizeJSON.Diff
+  before={{ format: "json", text: beforeText }}
+  after={{ format: "json", text: afterText }}
+  compareOptions={{ arrayKeys: { "$.users": "id" } }}
+  summaryOptions={{ locale: "pl" }}
+  height={560}
+/>
 ```
 
 Search navigation (Ctrl+F-style UI managed by the host app):
@@ -223,6 +255,73 @@ export function CustomRows({ json }: { json: string }) {
 
 Note: custom render content should stay within the fixed row height to keep virtualization accurate.
 
+## Backend document core
+
+Import `react-json-virtualization/core` to parse, search, filter, compare, and serialize documents without importing React or the component CSS. The application reads files or fetches URLs and passes the content to the library; the core has no filesystem or network access.
+
+```ts
+import {
+  compareDocuments,
+  filterDocument,
+  parseDocument,
+  searchDocument,
+  summarizeComparison
+} from "react-json-virtualization/core";
+
+const before = await parseDocument({ format: "json", text: firstFileText });
+const after = await parseDocument({ format: "json", text: secondFileText });
+
+const comparison = await compareDocuments(before, after, {
+  arrayKeys: { "$.users": "id" },
+  includeValues: false
+});
+const response = {
+  comparison,
+  summary: summarizeComparison(comparison, { locale: "pl" })
+};
+
+const matches = await searchDocument(after, "Ada", { limit: 100 });
+const filtered = await filterDocument(after, "$.users", { limit: 100 });
+// Return response, matches, or filtered from your own API handler.
+```
+
+`parseDocument` accepts `{ format: "json" | "yaml" | "xml", text }`; JSON also accepts `{ format: "json", value }`. The returned `ParsedDocument` is a plain serializable object. YAML uses the YAML 1.2 core schema. XML is normalized to an ordered tree of elements, attributes, and text; comments and formatting-only indentation are omitted, and DTD declarations are rejected.
+
+Search and filter operate on the full parsed structure rather than currently expanded viewer rows. They return a full match count and default to `offset: 0`, `limit: 500`. Filter results include ancestor `contextPaths`; neither operation mutates the input.
+
+Comparison requires matching formats. Objects are compared independent of key order; arrays compare by index unless a path is configured in `arrayKeys`. A key may be a field name or nested segment list, for example `{ "$.users": ["account", "id"] }`. Keyed array reorders produce `moved` events; each change carries before/after paths and indices where applicable. `includeValues: false` removes values while preserving the API summary.
+
+All asynchronous core operations accept an `AbortSignal` and `onProgress`. Errors are `DocumentError` objects with a serializable `code`, format, and location when available. `getValueAtPath` distinguishes a missing path from a JSON `null`, and `serializeNode` returns compact JSON by default.
+
+### Optional Web Worker
+
+The package does not create a worker during import. Create a worker entry in the application bundle:
+
+```ts
+// document.worker.ts
+import { installDocumentWorker } from "react-json-virtualization/worker";
+installDocumentWorker(self);
+```
+
+Then create a processor and pass it to the diff viewer or call it directly:
+
+```ts
+import { createWorkerProcessor } from "react-json-virtualization/worker";
+
+const processor = createWorkerProcessor(
+  () => new Worker(new URL("./document.worker.ts", import.meta.url), { type: "module" })
+);
+const comparison = await processor.compare(before, after, {
+  arrayKeys: { "$.users": "id" }
+});
+// Call processor.dispose() when the owning view or service is done.
+```
+
+The worker package leaves bundler configuration to the application. Cancellation and progress use worker messages; terminating a processor rejects pending work and does not retry it on the main thread.
+
+Pass the same processor to `VirtualizeJSON.Collapsable` or `VirtualizeJSON.Static` to parse a structural JSON tree through that processor. The viewer keeps its existing search and filter interactions; call `processor.search` or `processor.filter` directly when an application wants those whole-document results from a worker or backend.
+
+
 ## API
 
 ### VirtualizeJSON.Collapsable props
@@ -248,6 +347,11 @@ Note: custom render content should stay within the fixed row height to keep virt
 - `searchMetadataLimit?: number` Maximum identifiers returned in search metadata arrays. Default `500`.
 - `theme?: JsonThemeOverride` Per-token color overrides.
 - `selectedPath?: string` Controlled selected node path.
+- `revealPath?: string` Reveals and scrolls to a structural JSON path. Clear or change the prop before requesting the same path again.
+- `onRevealResult?: ({ path, status }) => void` Reports `revealed`, `not-found`, `filtered-out`, or `unsupported-mode`.
+- `copyActions?: boolean | { path?; value?; subtree? }` Opt-in row buttons for copying paths and JSON values. `true` enables all three.
+- `copyText?: (text) => void | Promise<void>` Clipboard adapter. Defaults to `navigator.clipboard.writeText`.
+- `onCopyError?: (error, path, kind) => void` Handles clipboard or adapter errors.
 - `className?: string` Optional custom class.
 - `rowFilter?: (context) => boolean` Optional row/line filter applied after `pathFilterQuery` and before search metadata. Return `true` to keep a row, `false` to hide it.
 - `rowDecorator?: (context) => { className?; style?; leading?; trailing?; actions? }` Optional per-row decoration for classes, styles, and extra UI slots.
@@ -256,6 +360,16 @@ Note: custom render content should stay within the fixed row height to keep virt
 - `onSearchMetadata?: (metadata) => void` Search callback with counts and capped match identifiers for both `metadata=true` (tree rows) and `metadata=false` (pretty lines). Does not filter the view.
 - `onParseProgress?: (processed, total) => void` Parse progress callback.
 - `onParseError?: (error) => void` Parse error callback.
+
+### VirtualizeJSON.Diff props
+
+- `before`, `after`: structured `DocumentInput` or prepared `ParsedDocument` values.
+- `comparison?: DocumentComparison` A precomputed backend result; when present it is rendered without a second comparison.
+- `compareOptions?: CompareOptions` Comparison settings such as keyed arrays, progress, cancellation, and `includeValues`.
+- `processor?: DocumentProcessor` Local by default; pass a worker processor to move work off the UI thread.
+- `height?: number | string`, `rowHeight?: number`, `overscan?: number`, `theme?: JsonThemeOverride`, `className?: string` Viewer appearance and virtualization settings.
+- `activeChangeIndex?: number`, `onActiveChangeIndexChange?: (index) => void` Controlled navigation through the change list.
+- `summaryOptions?: { locale?: "pl" | "en" }`, `onComparison?: (comparison, summary) => void`, `onError?: (error) => void` Result, locale, and error callbacks.
 
 `onSearchMetadata` payload fields:
 

@@ -1,20 +1,10 @@
 import type { FlatJsonRow, JSONArray, JSONObject, JSONValue, JSONValueType } from "./types";
+import { appendDocumentPath } from "./documents/paths";
 
 const PREVIEW_MAX_LENGTH = 60;
 
-const keyNeedsBracketNotation = (key: string): boolean => {
-  return !/^[$A-Z_a-z][$\w]*$/.test(key);
-};
-
-const escapeKey = (key: string): string => {
-  return key.replace(/\\/g, "\\\\").replace(/"/g, "\\\"");
-};
-
 const buildPath = (parentPath: string, key: string): string => {
-  if (keyNeedsBracketNotation(key)) {
-    return `${parentPath}["${escapeKey(key)}"]`;
-  }
-  return `${parentPath}.${key}`;
+  return appendDocumentPath(parentPath, key);
 };
 
 const getType = (value: JSONValue): JSONValueType => {

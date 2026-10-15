@@ -10,9 +10,11 @@ export default defineConfig({
   base,
   root: path.resolve(__dirname),
   resolve: {
-    alias: {
-      "react-json-virtualization": path.resolve(__dirname, "../src/index.ts")
-    }
+    alias: [
+      { find: /^react-json-virtualization\/core$/, replacement: path.resolve(__dirname, "../src/core/index.ts") },
+      { find: /^react-json-virtualization\/worker$/, replacement: path.resolve(__dirname, "../src/worker/index.ts") },
+      { find: /^react-json-virtualization$/, replacement: path.resolve(__dirname, "../src/index.ts") }
+    ]
   },
   server: {
     fs: {

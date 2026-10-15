@@ -61,11 +61,11 @@ export function RowCustomizationPanel({
       <div className="row-customization-hints">
         <p>Quick test ideas:</p>
         <ul>
-          <li>Users + stats sample: highlight "name" or "Ada", hide "roles".</li>
+          <li>Users + stats sample: highlight &quot;name&quot; or &quot;Ada&quot;, hide &quot;roles&quot;.</li>
           <li>Expand/collapse users to see nested rows update.</li>
           <li>Toggle alternate expand/collapse styling for visibility.</li>
-          <li>Nested catalog sample: highlight "name" or "Wireless".</li>
-          <li>Plain mode: switch Metadata off and try "2026".</li>
+          <li>Nested catalog sample: highlight &quot;name&quot; or &quot;Wireless&quot;.</li>
+          <li>Plain mode: switch Metadata off and try &quot;2026&quot;.</li>
         </ul>
       </div>
       <div className="toggle-row">

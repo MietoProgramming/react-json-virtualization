@@ -15,6 +15,7 @@ interface UseViewerContentParams {
   sourceFormat: ResolvedSourceFormat;
   json: string;
   root: JSONValue | null;
+  hasRoot?: boolean;
   activeExpandedPaths: ReadonlySet<string>;
   pathFilterQuery?: string;
   searchQuery?: string;
@@ -57,6 +58,7 @@ export const useViewerContent = ({
   sourceFormat,
   json,
   root,
+  hasRoot = root !== null,
   activeExpandedPaths,
   pathFilterQuery,
   searchQuery,
@@ -68,11 +70,11 @@ export const useViewerContent = ({
   rowFilter
 }: UseViewerContentParams): ViewerContentState => {
   const rows = useMemo(() => {
-    if (!metadata || root === null) {
+    if (!metadata || !hasRoot) {
       return [] as FlatJsonRow[];
     }
-    return flattenJson(root, activeExpandedPaths, { metadata });
-  }, [activeExpandedPaths, metadata, root]);
+    return flattenJson(root as JSONValue, activeExpandedPaths, { metadata });
+  }, [activeExpandedPaths, hasRoot, metadata, root]);
 
   const normalizedPathFilterQuery = normalizeQuery(pathFilterQuery);
   const normalizedSearchQuery = normalizeQuery(searchQuery);

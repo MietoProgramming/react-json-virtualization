@@ -13,6 +13,10 @@ const isWhitespace = (char: string): boolean => {
   return char === " " || char === "\n" || char === "\r" || char === "\t";
 };
 
+const isJsonControlCharacter = (char: string): boolean => char.charCodeAt(0) <= 0x1f;
+
+const yieldToEventLoop = (): Promise<void> => new Promise((resolve) => setTimeout(resolve, 0));
+
 const isDigit = (char: string): boolean => {
   return char >= "0" && char <= "9";
 };
@@ -42,6 +46,7 @@ class IncrementalParser {
     Pick<ParseOptions, "signal" | "onProgress">;
   private index = 0;
   private lastYieldAt = now();
+  private lastProgressAt = 0;
 
   constructor(source: string, options: ParseOptions) {
     this.source = source;
@@ -60,6 +65,8 @@ class IncrementalParser {
     if (this.index < this.source.length) {
       this.throwUnexpected("Unexpected trailing characters");
     }
+
+    this.options.onProgress?.(this.index, this.source.length);
 
     return value;
   }
@@ -113,7 +120,12 @@ class IncrementalParser {
       await this.skipWhitespace();
       this.expect(":");
       await this.skipWhitespace();
-      objectValue[key] = await this.parseValue();
+      Object.defineProperty(objectValue, key, {
+        configurable: true,
+        enumerable: true,
+        value: await this.parseValue(),
+        writable: true
+      });
       await this.skipWhitespace();
 
       if (this.tryConsume("}")) {
@@ -158,6 +170,10 @@ class IncrementalParser {
       const char = this.source[this.index++];
       if (char === '"') {
         return result;
+      }
+
+      if (isJsonControlCharacter(char)) {
+        this.throwUnexpected("Unescaped control character in string");
       }
 
       if (char === "\\") {
@@ -269,13 +285,21 @@ class IncrementalParser {
       throw new Error("JSON parsing aborted");
     }
 
-    if (reportProgress && this.options.onProgress) {
+    if (
+      reportProgress &&
+      this.options.onProgress &&
+      (now() - this.lastProgressAt >= 50 || this.index === this.source.length)
+    ) {
+      this.lastProgressAt = now();
       this.options.onProgress(this.index, this.source.length);
     }
 
     if (now() - this.lastYieldAt >= this.options.yieldIntervalMs) {
       this.lastYieldAt = now();
-      await Promise.resolve();
+      await yieldToEventLoop();
+      if (this.options.signal?.aborted) {
+        throw new Error("JSON parsing aborted");
+      }
     }
   }
 
@@ -289,6 +313,9 @@ export async function parseJsonIncremental(
   source: string,
   options: ParseOptions = {}
 ): Promise<JSONValue> {
+  if (options.signal?.aborted) {
+    throw new Error("JSON parsing aborted");
+  }
   const parser = new IncrementalParser(source, options);
   return parser.parse();
 }

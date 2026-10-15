@@ -2,6 +2,7 @@ import type { PathFilterMode } from "../../core/filter";
 import type { SourceFormat } from "../../core/sourceFormat";
 import type { FlatJsonRow, JSONViewerSearchMetadata } from "../../core/types";
 import type { JsonThemeOverride } from "../../theme";
+import type { DocumentProcessor } from "../../core/documents";
 import type {
     JSONViewerRowDecorator,
     JSONViewerRowFilter,
@@ -31,6 +32,11 @@ export interface JSONViewerProps {
     searchMetadataLimit?: number;
     theme?: JsonThemeOverride;
     selectedPath?: string;
+    revealPath?: string;
+    onRevealResult?: (result: JSONViewerRevealResult) => void;
+    copyActions?: boolean | JSONViewerCopyActions;
+    copyText?: (text: string) => void | Promise<void>;
+    onCopyError?: (error: Error, path: string, kind: "path" | "value" | "subtree") => void;
     className?: string;
     rowFilter?: JSONViewerRowFilter;
     rowDecorator?: JSONViewerRowDecorator;
@@ -39,4 +45,16 @@ export interface JSONViewerProps {
     onParseProgress?: (processedChars: number, totalChars: number) => void;
     onParseError?: (error: Error) => void;
     onSearchMetadata?: (metadata: JSONViewerSearchMetadata) => void;
+    processor?: DocumentProcessor;
+}
+
+export interface JSONViewerRevealResult {
+    path: string;
+    status: "revealed" | "not-found" | "filtered-out" | "unsupported-mode";
+}
+
+export interface JSONViewerCopyActions {
+    path?: boolean;
+    value?: boolean;
+    subtree?: boolean;
 }

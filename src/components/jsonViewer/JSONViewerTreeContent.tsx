@@ -3,6 +3,7 @@ import type { ResolvedSourceFormat } from "../../core/sourceFormat";
 import type { FlatJsonRow } from "../../core/types";
 import { JSONRow } from "../JSONRow";
 import type { JSONViewerRowDecorator, JSONViewerRowRenderer } from "./rowCustomization";
+import type { JSONViewerCopyActions } from "./JSONViewerProps";
 
 interface JSONViewerTreeContentProps {
   topSpacerHeight: number;
@@ -17,6 +18,9 @@ interface JSONViewerTreeContentProps {
   rowRenderer?: JSONViewerRowRenderer;
   onToggle: (path: string) => void;
   onSelect: (path: string) => void;
+  copyActions?: boolean | JSONViewerCopyActions;
+  copyText?: (text: string) => void | Promise<void>;
+  onCopyError?: (error: Error, path: string, kind: "path" | "value" | "subtree") => void;
 }
 
 export function JSONViewerTreeContent({
@@ -31,7 +35,10 @@ export function JSONViewerTreeContent({
   rowDecorator,
   rowRenderer,
   onToggle,
-  onSelect
+  onSelect,
+  copyActions,
+  copyText,
+  onCopyError
 }: JSONViewerTreeContentProps): React.ReactElement {
   return (
     <>
@@ -49,6 +56,9 @@ export function JSONViewerTreeContent({
           onToggle={onToggle}
           onSelect={onSelect}
           canToggle={!alwaysExpanded}
+          copyActions={copyActions}
+          copyText={copyText}
+          onCopyError={onCopyError}
         />
       ))}
       <div style={{ height: `${bottomSpacerHeight}px` }} />

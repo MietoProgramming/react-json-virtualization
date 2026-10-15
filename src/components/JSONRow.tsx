@@ -4,6 +4,8 @@ import type { ResolvedSourceFormat } from "../core/sourceFormat";
 import type { FlatJsonRow } from "../core/types";
 import type { JSONViewerRowDecorator, JSONViewerRowRenderer } from "./jsonViewer/rowCustomization";
 import { createTreeRowContext } from "./jsonViewer/rowCustomization";
+import { RowCopyActions } from "./jsonViewer/RowCopyActions";
+import type { JSONViewerCopyActions } from "./jsonViewer/JSONViewerProps";
 
 interface JSONRowProps {
   row: FlatJsonRow;
@@ -16,6 +18,9 @@ interface JSONRowProps {
   onToggle: (path: string) => void;
   onSelect: (path: string) => void;
   canToggle?: boolean;
+  copyActions?: boolean | JSONViewerCopyActions;
+  copyText?: (text: string) => void | Promise<void>;
+  onCopyError?: (error: Error, path: string, kind: "path" | "value" | "subtree") => void;
 }
 
 const renderPrimitive = (row: FlatJsonRow): React.ReactNode => {
@@ -60,7 +65,10 @@ export const JSONRow = React.memo(function JSONRow({
   rowRenderer,
   onToggle,
   onSelect,
-  canToggle = true
+  canToggle = true,
+  copyActions,
+  copyText,
+  onCopyError
 }: JSONRowProps) {
   const hasCustomization = Boolean(rowDecorator || rowRenderer);
   const context = hasCustomization ? createTreeRowContext(row, sourceFormat) : null;
@@ -146,9 +154,10 @@ export const JSONRow = React.memo(function JSONRow({
         {resolvedContent}
         {decoration?.trailing && <span className="rjv-row-trailing">{decoration.trailing}</span>}
       </div>
-      {decoration?.actions && (
+      {(decoration?.actions || copyActions) && (
         <div className="rjv-row-actions" onClick={(event) => event.stopPropagation()}>
-          {decoration.actions}
+          {decoration?.actions}
+          {copyActions && <RowCopyActions row={row} actions={copyActions} copyText={copyText} onCopyError={onCopyError} />}
         </div>
       )}
     </div>
