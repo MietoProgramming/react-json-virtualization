@@ -3,7 +3,7 @@ import type { DemoState, DemoStateActions } from "./useDemoStateTypes";
 
 export function useViewerState(): [
   Pick<DemoState, "activeMatchIndex" | "searchMetadata" | "viewerMode" | "expandedPaths" | "availableMatches" | "hasSearchQuery" | "matchCounterLabel" | "searchMatchCount" | "searchMode" | "searchCapped" | "expandedPathsCount">,
-  Pick<DemoStateActions, "goToNextMatch" | "goToPreviousMatch">
+  Pick<DemoStateActions, "goToNextMatch" | "goToPreviousMatch" | "setSearchMetadata">
 ] {
   const [activeMatchIndex, setActiveMatchIndex] = useState<number | null>(null);
   const [searchMetadata, setSearchMetadata] = useState<DemoState["searchMetadata"]>(null);
@@ -46,5 +46,5 @@ export function useViewerState(): [
     viewerMode, activeMatchIndex, searchMetadata, expandedPaths,
     availableMatches, hasSearchQuery, matchCounterLabel,
     searchMatchCount, searchMode, searchCapped, expandedPathsCount
-  }, { goToNextMatch, goToPreviousMatch }];
+  }, { goToNextMatch, goToPreviousMatch, setSearchMetadata }];
 }

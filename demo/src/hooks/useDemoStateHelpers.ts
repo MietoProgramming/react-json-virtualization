@@ -68,7 +68,7 @@ export function useFilterState(): [
 
 export function useSearchState(): [
   Pick<DemoState, "searchQuery" | "searchCaseSensitive" | "searchMetadataLimit" | "debouncedSearchQuery" | "debouncedSearchMetadataLimit">,
-  Pick<DemoStateActions, "setSearchQuery" | "setSearchCaseSensitive" | "setSearchMetadataLimit" | "setSearchMetadata" | "setActiveMatchIndex" | "applyScenario">
+  Pick<DemoStateActions, "setSearchQuery" | "setSearchCaseSensitive" | "setSearchMetadataLimit" | "applyScenario">
 ] {
   const [searchQuery, setSearchQuery] = useState("");
   const [searchCaseSensitive, setSearchCaseSensitive] = useState(false);
@@ -84,7 +84,7 @@ export function useSearchState(): [
   return [{
     searchQuery, searchCaseSensitive, searchMetadataLimit,
     debouncedSearchQuery, debouncedSearchMetadataLimit
-  }, { setSearchQuery, setSearchCaseSensitive, setSearchMetadataLimit, setSearchMetadata: () => { }, setActiveMatchIndex: () => { }, applyScenario }];
+  }, { setSearchQuery, setSearchCaseSensitive, setSearchMetadataLimit, applyScenario }];
 }
 
 export function useExpansionState(): [

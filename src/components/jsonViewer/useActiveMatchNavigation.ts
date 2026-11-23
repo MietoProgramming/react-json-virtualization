@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef } from "react";
 import type { FlatJsonRow, JSONViewerSearchMetadata } from "../../core/types";
+import type { UseVirtualizationResult } from "../../hooks/useVirtualization";
 import { resolveActiveMatchTarget } from "./activeMatch";
 
 interface UseActiveMatchNavigationParams {
@@ -10,9 +11,7 @@ interface UseActiveMatchNavigationParams {
     filteredPrettyLineIndexes: number[];
     selectedPath: string | undefined;
     setInternalSelectedPath: React.Dispatch<React.SetStateAction<string>>;
-    startIndex: number;
-    endIndex: number;
-    scrollToIndex: (index: number, align?: "start" | "center" | "end") => void;
+    scrollToIndex: UseVirtualizationResult["scrollToIndex"];
 }
 
 interface ActiveMatchNavigationState {
@@ -28,8 +27,6 @@ export const useActiveMatchNavigation = ({
     filteredPrettyLineIndexes,
     selectedPath,
     setInternalSelectedPath,
-    startIndex,
-    endIndex,
     scrollToIndex
 }: UseActiveMatchNavigationParams): ActiveMatchNavigationState => {
     const activeMatchTarget = useMemo(
@@ -102,12 +99,8 @@ export const useActiveMatchNavigation = ({
 
         lastActiveMatchSignature.current = nextSignature;
 
-        if (activeMatchScrollIndex >= startIndex && activeMatchScrollIndex < endIndex) {
-            return;
-        }
-
-        scrollToIndex(activeMatchScrollIndex, "center");
-    }, [activeMatchScrollIndex, activeMatchTarget, endIndex, scrollToIndex, startIndex]);
+        scrollToIndex(activeMatchScrollIndex, "center-if-needed");
+    }, [activeMatchScrollIndex, activeMatchTarget, scrollToIndex]);
 
     return {
         activeMatchPath,

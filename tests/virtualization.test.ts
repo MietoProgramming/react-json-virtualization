@@ -55,20 +55,20 @@ describe("calculateVirtualMetrics", () => {
     });
   });
 
-  it("handles fractional scrollTop consistently", () => {
+  it("renders a partially visible last row at fractional scrollTop", () => {
     expect(
       calculateVirtualMetrics({
         rowCount: 100,
         rowHeight: 24,
         overscan: 8,
-        scrollTop: 47,
+        scrollTop: 47.5,
         viewportHeight: 120
       })
     ).toEqual({
       startIndex: 0,
-      endIndex: 14,
+      endIndex: 15,
       topSpacerHeight: 0,
-      bottomSpacerHeight: 2064
+      bottomSpacerHeight: 2040
     });
   });
 });

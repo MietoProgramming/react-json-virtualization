@@ -3,10 +3,12 @@ import type { JsonTheme } from "../../theme";
 
 export const createViewerStyle = (
   height: number | string,
+  rowHeight: number,
   resolvedTheme: JsonTheme
 ): React.CSSProperties => {
   return {
     height,
+    "--rjv-row-height": `${rowHeight}px`,
     "--rjv-background": resolvedTheme.background,
     "--rjv-row-hover": resolvedTheme.rowHover,
     "--rjv-row-selected": resolvedTheme.rowSelected,
