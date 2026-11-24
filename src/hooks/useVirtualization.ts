@@ -1,5 +1,6 @@
 import type { RefObject, UIEvent } from "react";
 import { useCallback, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { createScrollRange } from "./scrollRange";
 
 export interface UseVirtualizationOptions {
   rowCount: number;
@@ -57,13 +58,17 @@ export function calculateVirtualMetrics({
     };
   }
 
-  const firstVisibleIndex = Math.floor(scrollTop / rowHeight);
-  const visibleEndIndex = Math.ceil((scrollTop + viewportHeight) / rowHeight);
-  const startIndex = Math.max(0, firstVisibleIndex - overscan);
-  const endIndex = Math.min(rowCount, visibleEndIndex + overscan);
+  const range = createScrollRange(rowCount, rowHeight, overscan, viewportHeight);
+  const viewportScrollTop = clampScrollTop(scrollTop, range.maxScrollTop);
+  const logicalScrollTop = range.toLogical(viewportScrollTop);
+  const firstVisibleIndex = Math.floor(logicalScrollTop / rowHeight);
+  const visibleEndIndex = Math.ceil((logicalScrollTop + viewportHeight) / rowHeight);
+  const startIndex = Math.max(0, firstVisibleIndex - range.overscan);
+  const endIndex = Math.min(rowCount, visibleEndIndex + range.overscan);
 
-  const topSpacerHeight = startIndex * rowHeight;
-  const bottomSpacerHeight = Math.max(0, (rowCount - endIndex) * rowHeight);
+  const topSpacerHeight = Math.max(0, startIndex * rowHeight - (logicalScrollTop - viewportScrollTop));
+  const renderedHeight = (endIndex - startIndex) * rowHeight;
+  const bottomSpacerHeight = Math.max(0, range.contentHeight - topSpacerHeight - renderedHeight);
 
   return {
     startIndex,
@@ -104,20 +109,9 @@ export function useVirtualization({
 
   useLayoutEffect(() => {
     const element = containerRef.current;
-    if (!element || viewportHeight === 0) {
-      return;
+    if (element) {
+      setScrollTop(element.scrollTop);
     }
-
-    const maxScrollTop = Math.max(0, element.scrollHeight - element.clientHeight);
-    const currentScrollTop = element.scrollTop;
-    const nextScrollTop = clampScrollTop(currentScrollTop, maxScrollTop);
-
-    if (nextScrollTop === currentScrollTop) {
-      return;
-    }
-
-    element.scrollTop = nextScrollTop;
-    setScrollTop(nextScrollTop);
   }, [rowCount, rowHeight, viewportHeight]);
 
   const metrics = useMemo(() => {
@@ -147,10 +141,12 @@ export function useVirtualization({
     const rowTop = clampedIndex * rowHeight;
     const rowBottom = rowTop + rowHeight;
     const { clientHeight, scrollHeight, scrollTop } = element;
+    const range = createScrollRange(rowCount, rowHeight, overscan, clientHeight);
+    const logicalScrollTop = range.toLogical(scrollTop);
     if (
       align === "center-if-needed" &&
-      rowTop >= scrollTop &&
-      rowBottom <= scrollTop + clientHeight
+      rowTop >= logicalScrollTop &&
+      rowBottom <= logicalScrollTop + clientHeight
     ) {
       return;
     }
@@ -166,14 +162,14 @@ export function useVirtualization({
       nextScrollTop = rowTop - (clientHeight - rowHeight) / 2;
     }
 
-    const clampedScrollTop = clampScrollTop(nextScrollTop, maxScrollTop);
+    const clampedScrollTop = clampScrollTop(range.toPhysical(nextScrollTop), maxScrollTop);
     if (scrollTop === clampedScrollTop) {
       return;
     }
 
     element.scrollTop = clampedScrollTop;
     setScrollTop(element.scrollTop);
-  }, [rowCount, rowHeight]);
+  }, [overscan, rowCount, rowHeight]);
 
   return {
     containerRef,
