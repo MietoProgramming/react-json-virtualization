@@ -72,7 +72,6 @@ export interface DemoStateActions {
   setSearchHighlightMode: (v: SearchHighlightMode) => void;
   setSearchMetadataLimit: (v: number) => void;
   setSearchMetadata: (v: JSONViewerSearchMetadata | null) => void;
-  setActiveMatchIndex: (v: number | null) => void;
   setIsControlledExpansion: (v: boolean) => void;
   setExpandedPaths: (v: Set<string>) => void;
   setSelectedPath: (v: string) => void;

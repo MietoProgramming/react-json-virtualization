@@ -110,8 +110,6 @@ export function JSONViewer({
     filteredPrettyLineIndexes,
     selectedPath,
     setInternalSelectedPath,
-    startIndex,
-    endIndex,
     scrollToIndex
   });
   const virtualizedRows = filteredRows.slice(startIndex, endIndex);
@@ -134,7 +132,7 @@ export function JSONViewer({
     setInternalSelectedPath,
     onNodeClick
   });
-  const style = createViewerStyle(height, resolveTheme(theme));
+  const style = createViewerStyle(height, rowHeight, resolveTheme(theme));
   const rootClassName = className ? `rjv-container ${className}` : "rjv-container";
   const rootRole = usesMetadataTree ? "tree" : "region";
   return (

@@ -16,8 +16,9 @@
     align-items: center;
     cursor: default;
     display: flex;
-    height: 24px;
-    min-height: 24px;
+    height: var(--rjv-row-height, 24px);
+    min-height: var(--rjv-row-height, 24px);
+    line-height: var(--rjv-row-height, 24px);
 }
 
 .rjv-row-content {

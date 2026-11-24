@@ -7,6 +7,8 @@ export interface UseVirtualizationOptions {
   overscan: number;
 }
 
+type ScrollAlignment = "start" | "center" | "end" | "center-if-needed";
+
 export interface UseVirtualizationResult {
   containerRef: RefObject<HTMLDivElement>;
   onScroll: (event: UIEvent<HTMLDivElement>) => void;
@@ -14,7 +16,7 @@ export interface UseVirtualizationResult {
   endIndex: number;
   topSpacerHeight: number;
   bottomSpacerHeight: number;
-  scrollToIndex: (index: number, align?: "start" | "center" | "end") => void;
+  scrollToIndex: (index: number, align?: ScrollAlignment) => void;
 }
 
 interface VirtualMetricsInput {
@@ -56,9 +58,9 @@ export function calculateVirtualMetrics({
   }
 
   const firstVisibleIndex = Math.floor(scrollTop / rowHeight);
-  const visibleCount = Math.ceil(viewportHeight / rowHeight);
+  const visibleEndIndex = Math.ceil((scrollTop + viewportHeight) / rowHeight);
   const startIndex = Math.max(0, firstVisibleIndex - overscan);
-  const endIndex = Math.min(rowCount, firstVisibleIndex + visibleCount + overscan);
+  const endIndex = Math.min(rowCount, visibleEndIndex + overscan);
 
   const topSpacerHeight = startIndex * rowHeight;
   const bottomSpacerHeight = Math.max(0, (rowCount - endIndex) * rowHeight);
@@ -134,7 +136,7 @@ export function useVirtualization({
 
   const scrollToIndex = useCallback((
     index: number,
-    align: "start" | "center" | "end" = "center"
+    align: ScrollAlignment = "center"
   ): void => {
     const element = containerRef.current;
     if (!element || rowCount === 0) {
@@ -142,24 +144,35 @@ export function useVirtualization({
     }
 
     const clampedIndex = Math.min(Math.max(index, 0), Math.max(0, rowCount - 1));
-    const maxScrollTop = Math.max(0, element.scrollHeight - element.clientHeight);
-    let nextScrollTop = 0;
+    const rowTop = clampedIndex * rowHeight;
+    const rowBottom = rowTop + rowHeight;
+    const { clientHeight, scrollHeight, scrollTop } = element;
+    if (
+      align === "center-if-needed" &&
+      rowTop >= scrollTop &&
+      rowBottom <= scrollTop + clientHeight
+    ) {
+      return;
+    }
+
+    const maxScrollTop = Math.max(0, scrollHeight - clientHeight);
+    let nextScrollTop: number;
 
     if (align === "start") {
-      nextScrollTop = clampedIndex * rowHeight;
+      nextScrollTop = rowTop;
     } else if (align === "end") {
-      nextScrollTop = (clampedIndex + 1) * rowHeight - element.clientHeight;
+      nextScrollTop = rowBottom - clientHeight;
     } else {
-      nextScrollTop = clampedIndex * rowHeight - (element.clientHeight / 2 - rowHeight / 2);
+      nextScrollTop = rowTop - (clientHeight - rowHeight) / 2;
     }
 
     const clampedScrollTop = clampScrollTop(nextScrollTop, maxScrollTop);
-    if (element.scrollTop === clampedScrollTop) {
+    if (scrollTop === clampedScrollTop) {
       return;
     }
 
     element.scrollTop = clampedScrollTop;
-    setScrollTop(clampedScrollTop);
+    setScrollTop(element.scrollTop);
   }, [rowCount, rowHeight]);
 
   return {
