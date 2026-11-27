@@ -1,6 +1,7 @@
 # Changelog
 
 ## 0.9.0
+- Keep search navigation and scrolling working when large documents exceed browser layout height limits.
 - Keep the active search result in view when navigating in either direction, including results rendered just outside the viewport.
 - Keep rendered tree rows aligned with the configured virtualization row height.
 - Restore search navigation controls in the demo.

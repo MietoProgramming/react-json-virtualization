@@ -33,3 +33,19 @@ node tests/browser/search-navigation.mjs
 ```
 
 The check verifies the active path or line number and its viewport bounds at each step in tree and plain modes, at a custom row height, and with overscan disabled. It exits with status 1 for a wrong or clipped result. Use `RJV_DEMO_URL` and `RJV_BIDI_URL` to override the local endpoints.
+
+## Firefox regression with a 780,100-row document
+
+Run the same browser check with `--large` to test navigation in both viewer modes when the document is taller than the browser's layout limit.
+
+```sh
+node tests/browser/search-navigation.mjs --large
+```
+
+To generate the same JSON for the demo file picker, run:
+
+```sh
+node tests/browser/search-navigation.mjs --large --print-fixture > search-navigation-large.json
+```
+
+Search for `rjv-needle` and navigate through the five matches. In Firefox 160.0.1, commit `8582d47` advanced the counter to the second result at `$[749980]` but reached only `scrollTop = 214`. The following clicks advanced the rendered window by nine rows at a time. For example, the first rendered data row moved from `$[8]` to `$[17]` to `$[26]`. With the bounded scroll range, the second result appears 245–269 px from the top of the 518 px viewport. All 22 checks pass, including previous and next navigation and wraparound.

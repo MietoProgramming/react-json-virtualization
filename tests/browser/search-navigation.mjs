@@ -2,11 +2,29 @@ import { readFile } from "node:fs/promises";
 
 const demoUrl = process.env.RJV_DEMO_URL ?? "http://127.0.0.1:4179/";
 const bidiUrl = process.env.RJV_BIDI_URL ?? "ws://127.0.0.1:9227/session";
-const fixture = await readFile(new URL("./search-navigation.json", import.meta.url), "utf8");
+const large = process.argv.includes("--large");
+const matchIndexes = large ? [0, 749_980, 750_020, 780_000, 780_040] : [0, 23, 63, 75, 87];
 
-async function verifyNavigation(json, { tree, rowHeight, overscan }) {
+function makeLargeFixture() {
+  const rows = Array.from({ length: 780_100 }, () => "filler");
+  matchIndexes.forEach((index, match) => {
+    rows[index] = `rjv-needle-${match + 1}`;
+  });
+  return JSON.stringify(rows);
+}
+
+const fixture = large
+  ? makeLargeFixture()
+  : await readFile(new URL("./search-navigation.json", import.meta.url), "utf8");
+if (process.argv.includes("--print-fixture")) {
+  process.stdout.write(fixture + "\n");
+  process.exit(0);
+}
+
+async function verifyNavigation(json, config) {
+  const { tree, rowHeight, overscan, matchIndexes, large } = JSON.parse(config);
   async function waitFor(read, label) {
-    for (let attempt = 0; attempt < 150; attempt++) {
+    for (let attempt = 0; attempt < (large ? 2500 : 150); attempt++) {
       const result = read();
       if (result) return result;
       await new Promise(resolve => setTimeout(resolve, 20));
@@ -46,7 +64,6 @@ async function verifyNavigation(json, { tree, rowHeight, overscan }) {
   const counter = document.querySelector(".search-counter");
   const viewer = document.querySelector(".rjv-container");
   const activeRowSelector = tree ? ".rjv-row-active-match" : ".rjv-plain-line-active-match";
-  const matchIndexes = [0, 23, 63, 75, 87];
   const sequence = [
     ["Search", 1], ["Next", 2], ["Next", 3], ["Next", 4], ["Next", 5],
     ["Prev", 4], ["Prev", 3], ["Prev", 2], ["Prev", 1], ["Prev", 5], ["Next", 1]
@@ -70,6 +87,7 @@ async function verifyNavigation(json, { tree, rowHeight, overscan }) {
     measurements.push({
       action, match, expected, actual,
       scrollTop: viewer.scrollTop,
+      firstRendered: viewer.querySelector("[data-row-id]")?.dataset.rowId,
       rowTop: row ? Math.round(row.top - viewportTop) : null,
       rowBottom: row ? Math.round(row.bottom - viewportTop) : null,
       viewportHeight: viewer.clientHeight,
@@ -110,12 +128,13 @@ try {
   const context = contexts[0].context;
   await send("browsingContext.setViewport", { context, viewport: { width: 1280, height: 900 } });
 
-  for (const scenario of [
+  const scenarios = [
     { tree: true, rowHeight: 24, overscan: 8 },
     { tree: false, rowHeight: 24, overscan: 8 },
     { tree: true, rowHeight: 32, overscan: 8 },
     { tree: true, rowHeight: 24, overscan: 0 }
-  ]) {
+  ];
+  for (const scenario of large ? scenarios.slice(0, 2) : scenarios) {
     await send("browsingContext.navigate", { context, url: demoUrl, wait: "complete" });
     const { result, exceptionDetails } = await send("script.callFunction", {
       functionDeclaration: verifyNavigation.toString(),
@@ -123,8 +142,7 @@ try {
       target: { context },
       arguments: [
         { type: "string", value: fixture },
-        { type: "object", value: Object.entries(scenario).map(([key, value]) =>
-          [key, { type: typeof value, value }]) }
+        { type: "string", value: JSON.stringify({ ...scenario, matchIndexes, large }) }
       ]
     });
     if (exceptionDetails) throw new Error(exceptionDetails.text);
